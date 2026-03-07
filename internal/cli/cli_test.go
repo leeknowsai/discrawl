@@ -1,0 +1,355 @@
+package cli
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/stretchr/testify/require"
+
+	"github.com/steipete/discrawl/internal/config"
+	discordclient "github.com/steipete/discrawl/internal/discord"
+	"github.com/steipete/discrawl/internal/store"
+	"github.com/steipete/discrawl/internal/syncer"
+)
+
+func TestHelpAndVersion(t *testing.T) {
+	t.Parallel()
+
+	var out bytes.Buffer
+	require.NoError(t, Run(context.Background(), []string{"help"}, &out, &bytes.Buffer{}))
+	require.Contains(t, out.String(), "discrawl")
+
+	out.Reset()
+	require.NoError(t, Run(context.Background(), []string{"--version"}, &out, &bytes.Buffer{}))
+	require.Contains(t, out.String(), "dev")
+
+	err := Run(context.Background(), []string{"bogus"}, &out, &bytes.Buffer{})
+	require.Equal(t, 2, ExitCode(err))
+}
+
+func TestStatusSearchSQLAndListings(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	dbPath := filepath.Join(dir, "discrawl.db")
+
+	cfg := config.Default()
+	cfg.DBPath = dbPath
+	cfg.DefaultGuildID = "g1"
+	require.NoError(t, config.Write(cfgPath, cfg))
+
+	s, err := store.Open(ctx, dbPath)
+	require.NoError(t, err)
+	require.NoError(t, s.UpsertGuild(ctx, store.GuildRecord{ID: "g1", Name: "Guild", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertChannel(ctx, store.ChannelRecord{ID: "c1", GuildID: "g1", Kind: "text", Name: "general", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertMember(ctx, store.MemberRecord{GuildID: "g1", UserID: "u1", Username: "peter", RoleIDsJSON: `[]`, RawJSON: `{}`}))
+	require.NoError(t, s.UpsertMessage(ctx, store.MessageRecord{
+		ID:                "m1",
+		GuildID:           "g1",
+		ChannelID:         "c1",
+		ChannelName:       "general",
+		AuthorID:          "u1",
+		AuthorName:        "Peter",
+		MessageType:       0,
+		CreatedAt:         time.Now().UTC().Format(time.RFC3339Nano),
+		Content:           "panic locked database",
+		NormalizedContent: "panic locked database",
+		RawJSON:           `{}`,
+	}))
+	require.NoError(t, s.Close())
+
+	tests := [][]string{
+		{"--config", cfgPath, "status"},
+		{"--config", cfgPath, "search", "panic"},
+		{"--config", cfgPath, "sql", "select count(*) as total from messages"},
+		{"--config", cfgPath, "members", "list"},
+		{"--config", cfgPath, "channels", "list"},
+	}
+	for _, args := range tests {
+		var out bytes.Buffer
+		require.NoError(t, Run(ctx, args, &out, &bytes.Buffer{}))
+		require.NotEmpty(t, out.String())
+	}
+}
+
+type fakeDiscordClient struct {
+	guilds []*discordgo.UserGuild
+	self   *discordgo.User
+}
+
+func (f *fakeDiscordClient) Close() error { return nil }
+func (f *fakeDiscordClient) Self(context.Context) (*discordgo.User, error) {
+	return f.self, nil
+}
+func (f *fakeDiscordClient) Guilds(context.Context) ([]*discordgo.UserGuild, error) {
+	return f.guilds, nil
+}
+func (f *fakeDiscordClient) Guild(context.Context, string) (*discordgo.Guild, error) {
+	return &discordgo.Guild{}, nil
+}
+func (f *fakeDiscordClient) GuildChannels(context.Context, string) ([]*discordgo.Channel, error) {
+	return nil, nil
+}
+func (f *fakeDiscordClient) ThreadsActive(context.Context, string) ([]*discordgo.Channel, error) {
+	return nil, nil
+}
+func (f *fakeDiscordClient) ThreadsArchived(context.Context, string, bool) ([]*discordgo.Channel, error) {
+	return nil, nil
+}
+func (f *fakeDiscordClient) GuildMembers(context.Context, string) ([]*discordgo.Member, error) {
+	return nil, nil
+}
+func (f *fakeDiscordClient) ChannelMessages(context.Context, string, int, string, string) ([]*discordgo.Message, error) {
+	return nil, nil
+}
+func (f *fakeDiscordClient) ChannelMessage(context.Context, string, string) (*discordgo.Message, error) {
+	return nil, nil
+}
+func (f *fakeDiscordClient) Tail(context.Context, discordclient.EventHandler) error {
+	return nil
+}
+
+type fakeSyncService struct {
+	discovered []*discordgo.UserGuild
+	lastSync   syncer.SyncOptions
+	lastTail   []string
+	lastRepair time.Duration
+}
+
+func (f *fakeSyncService) DiscoverGuilds(context.Context) ([]*discordgo.UserGuild, error) {
+	return f.discovered, nil
+}
+func (f *fakeSyncService) Sync(_ context.Context, opts syncer.SyncOptions) (syncer.SyncStats, error) {
+	f.lastSync = opts
+	return syncer.SyncStats{Guilds: len(opts.GuildIDs), Messages: 3}, nil
+}
+func (f *fakeSyncService) RunTail(_ context.Context, guildIDs []string, repairEvery time.Duration) error {
+	f.lastTail = guildIDs
+	f.lastRepair = repairEvery
+	return nil
+}
+
+func TestRuntimeInitSyncTailAndDoctor(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	dbPath := filepath.Join(dir, "discrawl.db")
+	t.Setenv(config.DefaultTokenEnv, "env-token")
+
+	fakeDiscord := &fakeDiscordClient{
+		guilds: []*discordgo.UserGuild{{ID: "g1"}, {ID: "g2"}},
+		self:   &discordgo.User{ID: "bot"},
+	}
+	fakeSync := &fakeSyncService{discovered: fakeDiscord.guilds}
+
+	newRuntime := func() *runtime {
+		return &runtime{
+			ctx:        ctx,
+			configPath: cfgPath,
+			stdout:     &bytes.Buffer{},
+			stderr:     &bytes.Buffer{},
+			logger:     discardLogger(),
+			openStore:  store.Open,
+			newDiscord: func(config.Config) (discordClient, error) { return fakeDiscord, nil },
+			newSyncer: func(syncer.Client, *store.Store, *slog.Logger) syncService {
+				return fakeSync
+			},
+		}
+	}
+
+	rt := newRuntime()
+	require.NoError(t, rt.runInit([]string{"--db", dbPath, "--with-embeddings", "--guild", "g2"}))
+
+	cfg, err := config.Load(cfgPath)
+	require.NoError(t, err)
+	require.Equal(t, []string{"g1", "g2"}, cfg.GuildIDs)
+	require.Equal(t, "g2", cfg.DefaultGuildID)
+	require.True(t, cfg.Search.Embeddings.Enabled)
+
+	rt = newRuntime()
+	require.NoError(t, rt.withServices(true, func() error { return rt.runSync([]string{"--guilds", "g2"}) }))
+	require.Equal(t, []string{"g2"}, fakeSync.lastSync.GuildIDs)
+
+	rt = newRuntime()
+	require.NoError(t, rt.withServices(true, func() error { return rt.runTail([]string{"--repair-every", "30s"}) }))
+	require.Equal(t, []string{"g2"}, fakeSync.lastTail)
+	require.Equal(t, 30*time.Second, fakeSync.lastRepair)
+
+	rt = newRuntime()
+	var out bytes.Buffer
+	rt.stdout = &out
+	require.NoError(t, rt.runDoctor(nil))
+	require.Contains(t, out.String(), "discord_auth=ok")
+}
+
+func TestHelpers(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, []string{"a", "b"}, csvList("a,b,a"))
+	require.Equal(t, "x", (&cliError{code: 2, err: assertErr("x")}).Error())
+	require.Equal(t, 2, ExitCode(usageErr(assertErr("x"))))
+	require.Equal(t, 4, ExitCode(authErr(assertErr("x"))))
+	require.Equal(t, 5, ExitCode(dbErr(assertErr("x"))))
+	require.Equal(t, 3, ExitCode(configErr(assertErr("x"))))
+	require.Equal(t, 1, ExitCode(assertErr("x")))
+	var out bytes.Buffer
+	require.NoError(t, printHuman(&out, syncer.SyncStats{Guilds: 1}))
+	require.Contains(t, out.String(), "guilds=1")
+	require.Contains(t, formatTime(time.Unix(1, 0).UTC()), "1970")
+	require.Equal(t, "x", firstNonEmpty("", "x", "y"))
+}
+
+type assertErr string
+
+func (e assertErr) Error() string { return string(e) }
+
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+func TestRuntimeHelpersAndSubcommands(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	dbPath := filepath.Join(dir, "discrawl.db")
+
+	cfg := config.Default()
+	cfg.DBPath = dbPath
+	cfg.DefaultGuildID = "g1"
+	require.NoError(t, config.Write(cfgPath, cfg))
+
+	s, err := store.Open(ctx, dbPath)
+	require.NoError(t, err)
+	require.NoError(t, s.UpsertChannel(ctx, store.ChannelRecord{ID: "c1", GuildID: "g1", Kind: "text", Name: "general", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertMember(ctx, store.MemberRecord{GuildID: "g1", UserID: "u1", Username: "peter", RoleIDsJSON: `[]`, RawJSON: `{}`}))
+	require.NoError(t, s.Close())
+
+	rt := &runtime{
+		ctx:        ctx,
+		configPath: cfgPath,
+		stdout:     &bytes.Buffer{},
+		stderr:     &bytes.Buffer{},
+		logger:     discardLogger(),
+	}
+	require.NoError(t, rt.withServices(false, func() error {
+		require.Equal(t, []string{"g1"}, rt.resolveSyncGuilds("", ""))
+		require.Nil(t, rt.resolveSearchGuilds("", ""))
+		require.NoError(t, rt.runMembers([]string{"show", "u1"}))
+		require.NoError(t, rt.runMembers([]string{"search", "pet"}))
+		require.NoError(t, rt.runMembers([]string{"list"}))
+		require.NoError(t, rt.runChannels([]string{"show", "c1"}))
+		require.NoError(t, rt.runChannels([]string{"list"}))
+		require.NoError(t, rt.runStatus(nil))
+		return nil
+	}))
+}
+
+func TestPrintJSONAndPlain(t *testing.T) {
+	t.Parallel()
+
+	rt := &runtime{stdout: &bytes.Buffer{}, json: true}
+	require.NoError(t, rt.print(map[string]any{"ok": true}))
+	require.Contains(t, rt.stdout.(*bytes.Buffer).String(), "\"ok\": true")
+
+	rt = &runtime{stdout: &bytes.Buffer{}, plain: true}
+	require.NoError(t, rt.print([]store.ChannelRow{{GuildID: "g1", ID: "c1", Kind: "text", Name: "general"}}))
+	require.Contains(t, rt.stdout.(*bytes.Buffer).String(), "general")
+
+	rt = &runtime{stdout: &bytes.Buffer{}}
+	require.NoError(t, rt.print([]store.SearchResult{{GuildID: "g1", ChannelName: "general", AuthorName: "Peter", Content: "hello"}}))
+	require.Contains(t, rt.stdout.(*bytes.Buffer).String(), "hello")
+
+	rt = &runtime{stdout: &bytes.Buffer{}, plain: true}
+	require.NoError(t, rt.print([]store.MemberRow{{GuildID: "g1", UserID: "u1", Username: "peter"}}))
+	require.Contains(t, rt.stdout.(*bytes.Buffer).String(), "peter")
+
+	rt = &runtime{stdout: &bytes.Buffer{}, plain: true}
+	require.NoError(t, rt.print([]store.SearchResult{{GuildID: "g1", ChannelID: "c1", AuthorID: "u1", Content: "hello"}}))
+	require.Contains(t, rt.stdout.(*bytes.Buffer).String(), "hello")
+
+	rt = &runtime{stdout: &bytes.Buffer{}}
+	require.NoError(t, rt.print(struct{ OK bool }{OK: true}))
+	require.Contains(t, rt.stdout.(*bytes.Buffer).String(), "\"OK\": true")
+}
+
+func TestWithServicesErrors(t *testing.T) {
+	t.Parallel()
+
+	rt := &runtime{ctx: context.Background(), configPath: filepath.Join(t.TempDir(), "missing.toml"), stdout: &bytes.Buffer{}, stderr: &bytes.Buffer{}}
+	err := rt.withServices(false, func() error { return nil })
+	require.Equal(t, 3, ExitCode(err))
+
+	cfgPath := filepath.Join(t.TempDir(), "config.toml")
+	cfg := config.Default()
+	cfg.DBPath = filepath.Join(t.TempDir(), "discrawl.db")
+	require.NoError(t, config.Write(cfgPath, cfg))
+	rt = &runtime{
+		ctx:        context.Background(),
+		configPath: cfgPath,
+		stdout:     &bytes.Buffer{},
+		stderr:     &bytes.Buffer{},
+		openStore: func(context.Context, string) (*store.Store, error) {
+			return nil, assertErr("db")
+		},
+	}
+	err = rt.withServices(false, func() error { return nil })
+	require.Equal(t, 5, ExitCode(err))
+
+	rt = &runtime{
+		ctx:        context.Background(),
+		configPath: cfgPath,
+		stdout:     &bytes.Buffer{},
+		stderr:     &bytes.Buffer{},
+		openStore:  store.Open,
+		newDiscord: func(config.Config) (discordClient, error) { return nil, assertErr("auth") },
+	}
+	err = rt.withServices(true, func() error { return nil })
+	require.Equal(t, 4, ExitCode(err))
+}
+
+func TestCommandUsageErrors(t *testing.T) {
+	t.Parallel()
+
+	rt := &runtime{}
+	require.Equal(t, 2, ExitCode(rt.runMembers(nil)))
+	require.Equal(t, 2, ExitCode(rt.runMembers([]string{"nope"})))
+	require.Equal(t, 2, ExitCode(rt.runChannels(nil)))
+	require.Equal(t, 2, ExitCode(rt.runStatus([]string{"extra"})))
+	require.NoError(t, (&runtime{stdout: &bytes.Buffer{}}).runDoctor(nil))
+}
+
+func TestRunSQLReadsStdin(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	dbPath := filepath.Join(dir, "discrawl.db")
+
+	cfg := config.Default()
+	cfg.DBPath = dbPath
+	require.NoError(t, config.Write(cfgPath, cfg))
+
+	s, err := store.Open(ctx, dbPath)
+	require.NoError(t, err)
+	require.NoError(t, s.Close())
+
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+	file, err := os.CreateTemp(dir, "stdin.sql")
+	require.NoError(t, err)
+	_, err = file.WriteString("select 1 as one")
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+	file, err = os.Open(file.Name())
+	require.NoError(t, err)
+	os.Stdin = file
+
+	rt := &runtime{ctx: ctx, configPath: cfgPath, stdout: &bytes.Buffer{}, stderr: &bytes.Buffer{}, logger: discardLogger()}
+	require.NoError(t, rt.withServices(false, func() error { return rt.runSQL([]string{"-"}) }))
+}

@@ -1,0 +1,338 @@
+package store
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"time"
+)
+
+type GuildRecord struct {
+	ID      string
+	Name    string
+	Icon    string
+	RawJSON string
+}
+
+type ChannelRecord struct {
+	ID               string
+	GuildID          string
+	ParentID         string
+	Kind             string
+	Name             string
+	Topic            string
+	Position         int
+	IsNSFW           bool
+	IsArchived       bool
+	IsLocked         bool
+	IsPrivateThread  bool
+	ThreadParentID   string
+	ArchiveTimestamp string
+	RawJSON          string
+}
+
+type MemberRecord struct {
+	GuildID       string
+	UserID        string
+	Username      string
+	GlobalName    string
+	DisplayName   string
+	Nick          string
+	Discriminator string
+	Avatar        string
+	Bot           bool
+	JoinedAt      string
+	RoleIDsJSON   string
+	RawJSON       string
+}
+
+type MessageRecord struct {
+	ID                string
+	GuildID           string
+	ChannelID         string
+	ChannelName       string
+	AuthorID          string
+	AuthorName        string
+	MessageType       int
+	CreatedAt         string
+	EditedAt          string
+	DeletedAt         string
+	Content           string
+	NormalizedContent string
+	ReplyToMessageID  string
+	Pinned            bool
+	HasAttachments    bool
+	RawJSON           string
+}
+
+type MessageMutation struct {
+	Record      MessageRecord
+	EventType   string
+	PayloadJSON string
+}
+
+func (s *Store) UpsertGuild(ctx context.Context, guild GuildRecord) error {
+	now := time.Now().UTC().Format(timeLayout)
+	_, err := s.db.ExecContext(ctx, `
+		insert into guilds(id, name, icon, raw_json, updated_at)
+		values(?, ?, ?, ?, ?)
+		on conflict(id) do update set
+			name=excluded.name,
+			icon=excluded.icon,
+			raw_json=excluded.raw_json,
+			updated_at=excluded.updated_at
+	`, guild.ID, guild.Name, guild.Icon, guild.RawJSON, now)
+	return err
+}
+
+func (s *Store) UpsertChannel(ctx context.Context, channel ChannelRecord) error {
+	now := time.Now().UTC().Format(timeLayout)
+	_, err := s.db.ExecContext(ctx, `
+		insert into channels(
+			id, guild_id, parent_id, kind, name, topic, position, is_nsfw,
+			is_archived, is_locked, is_private_thread, thread_parent_id,
+			archive_timestamp, raw_json, updated_at
+		) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		on conflict(id) do update set
+			guild_id=excluded.guild_id,
+			parent_id=excluded.parent_id,
+			kind=excluded.kind,
+			name=excluded.name,
+			topic=excluded.topic,
+			position=excluded.position,
+			is_nsfw=excluded.is_nsfw,
+			is_archived=excluded.is_archived,
+			is_locked=excluded.is_locked,
+			is_private_thread=excluded.is_private_thread,
+			thread_parent_id=excluded.thread_parent_id,
+			archive_timestamp=excluded.archive_timestamp,
+			raw_json=excluded.raw_json,
+			updated_at=excluded.updated_at
+	`, channel.ID, channel.GuildID, channel.ParentID, channel.Kind, channel.Name, channel.Topic, channel.Position,
+		boolInt(channel.IsNSFW), boolInt(channel.IsArchived), boolInt(channel.IsLocked), boolInt(channel.IsPrivateThread),
+		channel.ThreadParentID, nullable(channel.ArchiveTimestamp), channel.RawJSON, now)
+	return err
+}
+
+func (s *Store) ReplaceMembers(ctx context.Context, guildID string, members []MemberRecord) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer rollback(tx)
+	if _, err := tx.ExecContext(ctx, `delete from members where guild_id = ?`, guildID); err != nil {
+		return err
+	}
+	now := time.Now().UTC().Format(timeLayout)
+	stmt, err := tx.PrepareContext(ctx, `
+		insert into members(
+			guild_id, user_id, username, global_name, display_name, nick, discriminator,
+			avatar, bot, joined_at, role_ids_json, raw_json, updated_at
+		) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stmt.Close() }()
+	for _, member := range members {
+		if _, err := stmt.ExecContext(ctx, member.GuildID, member.UserID, member.Username, nullable(member.GlobalName),
+			nullable(member.DisplayName), nullable(member.Nick), nullable(member.Discriminator), nullable(member.Avatar),
+			boolInt(member.Bot), nullable(member.JoinedAt), member.RoleIDsJSON, member.RawJSON, now); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *Store) UpsertMember(ctx context.Context, member MemberRecord) error {
+	now := time.Now().UTC().Format(timeLayout)
+	_, err := s.db.ExecContext(ctx, `
+		insert into members(
+			guild_id, user_id, username, global_name, display_name, nick, discriminator,
+			avatar, bot, joined_at, role_ids_json, raw_json, updated_at
+		) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		on conflict(guild_id, user_id) do update set
+			username=excluded.username,
+			global_name=excluded.global_name,
+			display_name=excluded.display_name,
+			nick=excluded.nick,
+			discriminator=excluded.discriminator,
+			avatar=excluded.avatar,
+			bot=excluded.bot,
+			joined_at=excluded.joined_at,
+			role_ids_json=excluded.role_ids_json,
+			raw_json=excluded.raw_json,
+			updated_at=excluded.updated_at
+	`, member.GuildID, member.UserID, member.Username, nullable(member.GlobalName), nullable(member.DisplayName),
+		nullable(member.Nick), nullable(member.Discriminator), nullable(member.Avatar), boolInt(member.Bot),
+		nullable(member.JoinedAt), member.RoleIDsJSON, member.RawJSON, now)
+	return err
+}
+
+func (s *Store) DeleteMember(ctx context.Context, guildID, userID string) error {
+	_, err := s.db.ExecContext(ctx, `delete from members where guild_id = ? and user_id = ?`, guildID, userID)
+	return err
+}
+
+func (s *Store) UpsertMessage(ctx context.Context, message MessageRecord) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer rollback(tx)
+	if err := upsertMessageTx(ctx, tx, message); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Store) UpsertMessages(ctx context.Context, messages []MessageMutation) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer rollback(tx)
+	for _, message := range messages {
+		if err := upsertMessageTx(ctx, tx, message.Record); err != nil {
+			return err
+		}
+		if message.EventType != "" {
+			if err := appendEventTx(
+				ctx,
+				tx,
+				message.Record.GuildID,
+				message.Record.ChannelID,
+				message.Record.ID,
+				message.EventType,
+				message.PayloadJSON,
+			); err != nil {
+				return err
+			}
+		}
+	}
+	return tx.Commit()
+}
+
+func upsertMessageTx(ctx context.Context, tx *sql.Tx, message MessageRecord) error {
+	now := time.Now().UTC().Format(timeLayout)
+	if _, err := tx.ExecContext(ctx, `
+		insert into messages(
+			id, guild_id, channel_id, author_id, message_type, created_at, edited_at, deleted_at,
+			content, normalized_content, reply_to_message_id, pinned, has_attachments, raw_json, updated_at
+		) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		on conflict(id) do update set
+			guild_id=excluded.guild_id,
+			channel_id=excluded.channel_id,
+			author_id=excluded.author_id,
+			message_type=excluded.message_type,
+			created_at=excluded.created_at,
+			edited_at=excluded.edited_at,
+			deleted_at=coalesce(excluded.deleted_at, messages.deleted_at),
+			content=excluded.content,
+			normalized_content=excluded.normalized_content,
+			reply_to_message_id=excluded.reply_to_message_id,
+			pinned=excluded.pinned,
+			has_attachments=excluded.has_attachments,
+			raw_json=excluded.raw_json,
+			updated_at=excluded.updated_at
+	`, message.ID, message.GuildID, message.ChannelID, nullable(message.AuthorID), message.MessageType, message.CreatedAt,
+		nullable(message.EditedAt), nullable(message.DeletedAt), message.Content, message.NormalizedContent,
+		nullable(message.ReplyToMessageID), boolInt(message.Pinned), boolInt(message.HasAttachments), message.RawJSON, now); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `delete from message_fts where message_id = ?`, message.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		insert into message_fts(message_id, guild_id, channel_id, author_id, author_name, channel_name, content)
+		values(?, ?, ?, ?, ?, ?, ?)
+	`, message.ID, message.GuildID, message.ChannelID, nullable(message.AuthorID), message.AuthorName, message.ChannelName, message.NormalizedContent); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		insert into embedding_jobs(message_id, state, attempts, updated_at)
+		values(?, 'pending', 0, ?)
+		on conflict(message_id) do nothing
+	`, message.ID, now); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) MarkMessageDeleted(ctx context.Context, guildID, channelID, messageID string, payload any) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer rollback(tx)
+	now := time.Now().UTC().Format(timeLayout)
+	if _, err := tx.ExecContext(ctx, `
+		update messages
+		set deleted_at = ?, updated_at = ?
+		where id = ?
+	`, now, now, messageID); err != nil {
+		return err
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	if err := appendEventTx(ctx, tx, guildID, channelID, messageID, "delete", string(body)); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Store) AppendMessageEvent(ctx context.Context, guildID, channelID, messageID, eventType string, payload any) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `
+		insert into message_events(guild_id, channel_id, message_id, event_type, event_at, payload_json)
+		values(?, ?, ?, ?, ?, ?)
+	`, guildID, channelID, messageID, eventType, time.Now().UTC().Format(timeLayout), string(body))
+	return err
+}
+
+func appendEventTx(ctx context.Context, tx *sql.Tx, guildID, channelID, messageID, eventType, payload string) error {
+	_, err := tx.ExecContext(ctx, `
+		insert into message_events(guild_id, channel_id, message_id, event_type, event_at, payload_json)
+		values(?, ?, ?, ?, ?, ?)
+	`, guildID, channelID, messageID, eventType, time.Now().UTC().Format(timeLayout), payload)
+	return err
+}
+
+func (s *Store) SetSyncState(ctx context.Context, scope, cursor string) error {
+	_, err := s.db.ExecContext(ctx, `
+		insert into sync_state(scope, cursor, updated_at)
+		values(?, ?, ?)
+		on conflict(scope) do update set
+			cursor=excluded.cursor,
+			updated_at=excluded.updated_at
+	`, scope, cursor, time.Now().UTC().Format(timeLayout))
+	return err
+}
+
+func rollback(tx *sql.Tx) {
+	if tx != nil {
+		_ = tx.Rollback()
+	}
+}
+
+func boolInt(v bool) int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
+func nullable(v string) any {
+	if v == "" {
+		return nil
+	}
+	return v
+}
