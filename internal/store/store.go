@@ -4,14 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
 
-const timeLayout = time.RFC3339Nano
+const (
+	timeLayout        = time.RFC3339Nano
+	messageFTSVersion = "2"
+)
 
 type Store struct {
 	db *sql.DB
@@ -214,5 +219,136 @@ func (s *Store) migrate(ctx context.Context) error {
 			return fmt.Errorf("migrate: %w", err)
 		}
 	}
+	if err := s.ensureFTSRowIDs(ctx); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (s *Store) ensureFTSRowIDs(ctx context.Context) error {
+	var version sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		select cursor
+		from sync_state
+		where scope = 'schema:message_fts_rowid_version'
+	`).Scan(&version)
+	if err == nil && version.String == messageFTSVersion {
+		return nil
+	}
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("check fts schema version: %w", err)
+	}
+	if err := s.rebuildFTS(ctx); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `
+		insert into sync_state(scope, cursor, updated_at)
+		values(?, ?, ?)
+		on conflict(scope) do update set
+			cursor=excluded.cursor,
+			updated_at=excluded.updated_at
+	`, "schema:message_fts_rowid_version", messageFTSVersion, time.Now().UTC().Format(timeLayout)); err != nil {
+		return fmt.Errorf("stamp fts schema version: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) rebuildFTS(ctx context.Context) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer rollback(tx)
+
+	if _, err := tx.ExecContext(ctx, `drop table if exists message_fts`); err != nil {
+		return fmt.Errorf("drop message_fts: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+		create virtual table message_fts using fts5(
+			message_id unindexed,
+			guild_id unindexed,
+			channel_id unindexed,
+			author_id unindexed,
+			author_name,
+			channel_name,
+			content
+		)
+	`); err != nil {
+		return fmt.Errorf("create message_fts: %w", err)
+	}
+	rows, err := tx.QueryContext(ctx, `
+		select
+			m.id,
+			m.guild_id,
+			m.channel_id,
+			coalesce(m.author_id, ''),
+			coalesce(
+				json_extract(m.raw_json, '$.member.nick'),
+				json_extract(m.raw_json, '$.author.global_name'),
+				json_extract(m.raw_json, '$.author.username'),
+				''
+			),
+			coalesce(c.name, ''),
+			m.normalized_content
+		from messages m
+		left join channels c on c.id = m.channel_id
+		order by cast(m.id as integer)
+	`)
+	if err != nil {
+		return fmt.Errorf("query fts rebuild rows: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		insert into message_fts(
+			rowid, message_id, guild_id, channel_id, author_id, author_name, channel_name, content
+		) values(?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare fts rebuild: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	for rows.Next() {
+		var (
+			messageID   string
+			guildID     string
+			channelID   string
+			authorID    string
+			authorName  string
+			channelName string
+			content     string
+		)
+		if err := rows.Scan(&messageID, &guildID, &channelID, &authorID, &authorName, &channelName, &content); err != nil {
+			return fmt.Errorf("scan fts rebuild row: %w", err)
+		}
+		rowID, ok := messageFTSRowID(messageID)
+		if !ok {
+			continue
+		}
+		if _, err := stmt.ExecContext(ctx, rowID, messageID, guildID, channelID, nullable(authorID), authorName, channelName, content); err != nil {
+			return fmt.Errorf("insert fts rebuild row: %w", err)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate fts rebuild rows: %w", err)
+	}
+	return tx.Commit()
+}
+
+func messageFTSRowID(messageID string) (int64, bool) {
+	if messageID == "" {
+		return 0, false
+	}
+	rowID, err := strconv.ParseInt(messageID, 10, 64)
+	if err == nil && rowID > 0 {
+		return rowID, true
+	}
+	hash := fnv.New64a()
+	_, _ = hash.Write([]byte(messageID))
+	rowID = int64(hash.Sum64() & ((uint64(1) << 63) - 1))
+	if rowID == 0 {
+		rowID = 1
+	}
+	return rowID, true
 }

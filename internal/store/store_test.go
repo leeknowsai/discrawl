@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -290,4 +291,89 @@ func TestConcurrentMessageUpsertsShareSingleWriter(t *testing.T) {
 	_, rows, err := s.ReadOnlyQuery(ctx, "select count(*) from messages")
 	require.NoError(t, err)
 	require.Equal(t, "8", rows[0][0])
+}
+
+func TestMessageFTSUsesSnowflakeRowID(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "discrawl.db"))
+	require.NoError(t, err)
+	defer func() { _ = s.Close() }()
+
+	record := MessageRecord{
+		ID:                "1469950701764350208",
+		GuildID:           "g1",
+		ChannelID:         "c1",
+		ChannelName:       "general",
+		AuthorID:          "u1",
+		AuthorName:        "Peter",
+		MessageType:       0,
+		CreatedAt:         time.Now().UTC().Format(time.RFC3339Nano),
+		Content:           "first body",
+		NormalizedContent: "first body",
+		RawJSON:           `{"author":{"username":"Peter"}}`,
+	}
+	require.NoError(t, s.UpsertMessage(ctx, record))
+
+	record.Content = "second body"
+	record.NormalizedContent = "second body"
+	require.NoError(t, s.UpsertMessage(ctx, record))
+
+	_, rows, err := s.ReadOnlyQuery(ctx, "select count(*), min(rowid), max(rowid), min(content) from message_fts")
+	require.NoError(t, err)
+	require.Equal(t, []string{"1", "1469950701764350208", "1469950701764350208", "second body"}, rows[0])
+}
+
+func TestOpenRebuildsLegacyFTSRowIDs(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "discrawl.db")
+	s, err := Open(ctx, dbPath)
+	require.NoError(t, err)
+
+	messageID := "1469950701764350208"
+	channelID := "c1"
+	require.NoError(t, s.UpsertChannel(ctx, ChannelRecord{ID: channelID, GuildID: "g1", Kind: "text", Name: "general", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertMessage(ctx, MessageRecord{
+		ID:                messageID,
+		GuildID:           "g1",
+		ChannelID:         channelID,
+		ChannelName:       "general",
+		AuthorID:          "u1",
+		AuthorName:        "Peter",
+		MessageType:       0,
+		CreatedAt:         time.Now().UTC().Format(time.RFC3339Nano),
+		Content:           "panic database is locked",
+		NormalizedContent: "panic database is locked",
+		RawJSON:           `{"author":{"username":"Peter"}}`,
+	}))
+	require.NoError(t, s.Close())
+
+	sqlDB, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	_, err = sqlDB.ExecContext(ctx, `delete from message_fts`)
+	require.NoError(t, err)
+	_, err = sqlDB.ExecContext(ctx, `
+		insert into message_fts(message_id, guild_id, channel_id, author_id, author_name, channel_name, content)
+		values(?, ?, ?, ?, ?, ?, ?)
+	`, messageID, "g1", channelID, "u1", "Peter", "general", "panic database is locked")
+	require.NoError(t, err)
+	_, err = sqlDB.ExecContext(ctx, `delete from sync_state where scope = 'schema:message_fts_rowid_version'`)
+	require.NoError(t, err)
+	require.NoError(t, sqlDB.Close())
+
+	s, err = Open(ctx, dbPath)
+	require.NoError(t, err)
+	defer func() { _ = s.Close() }()
+
+	_, rows, err := s.ReadOnlyQuery(ctx, "select rowid, message_id from message_fts")
+	require.NoError(t, err)
+	require.Equal(t, []string{messageID, messageID}, rows[0])
+
+	results, err := s.SearchMessages(ctx, SearchOptions{Query: "panic", Limit: 10})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	require.Equal(t, messageID, results[0].MessageID)
 }

@@ -243,14 +243,16 @@ func upsertMessageTx(ctx context.Context, tx *sql.Tx, message MessageRecord) err
 		nullable(message.ReplyToMessageID), boolInt(message.Pinned), boolInt(message.HasAttachments), message.RawJSON, now); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `delete from message_fts where message_id = ?`, message.ID); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, `
-		insert into message_fts(message_id, guild_id, channel_id, author_id, author_name, channel_name, content)
-		values(?, ?, ?, ?, ?, ?, ?)
-	`, message.ID, message.GuildID, message.ChannelID, nullable(message.AuthorID), message.AuthorName, message.ChannelName, message.NormalizedContent); err != nil {
-		return err
+	if rowID, ok := messageFTSRowID(message.ID); ok {
+		if _, err := tx.ExecContext(ctx, `delete from message_fts where rowid = ?`, rowID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			insert into message_fts(rowid, message_id, guild_id, channel_id, author_id, author_name, channel_name, content)
+			values(?, ?, ?, ?, ?, ?, ?, ?)
+		`, rowID, message.ID, message.GuildID, message.ChannelID, nullable(message.AuthorID), message.AuthorName, message.ChannelName, message.NormalizedContent); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.ExecContext(ctx, `
 		insert into embedding_jobs(message_id, state, attempts, updated_at)
