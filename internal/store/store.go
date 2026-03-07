@@ -38,11 +38,12 @@ type Status struct {
 }
 
 type SearchOptions struct {
-	Query    string
-	GuildIDs []string
-	Channel  string
-	Author   string
-	Limit    int
+	Query        string
+	GuildIDs     []string
+	Channel      string
+	Author       string
+	Limit        int
+	IncludeEmpty bool
 }
 
 type SearchResult struct {

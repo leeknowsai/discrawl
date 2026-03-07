@@ -324,6 +324,7 @@ func (r *runtime) runSearch(args []string) error {
 	channel := fs.String("channel", "", "")
 	author := fs.String("author", "", "")
 	limit := fs.Int("limit", 20, "")
+	includeEmpty := fs.Bool("include-empty", false, "")
 	guildsFlag := fs.String("guilds", "", "")
 	guildFlag := fs.String("guild", "", "")
 	if err := fs.Parse(args); err != nil {
@@ -334,11 +335,12 @@ func (r *runtime) runSearch(args []string) error {
 	}
 	_ = mode
 	results, err := r.store.SearchMessages(r.ctx, store.SearchOptions{
-		Query:    fs.Arg(0),
-		GuildIDs: r.resolveSearchGuilds(*guildFlag, *guildsFlag),
-		Channel:  *channel,
-		Author:   *author,
-		Limit:    *limit,
+		Query:        fs.Arg(0),
+		GuildIDs:     r.resolveSearchGuilds(*guildFlag, *guildsFlag),
+		Channel:      *channel,
+		Author:       *author,
+		Limit:        *limit,
+		IncludeEmpty: *includeEmpty,
 	})
 	if err != nil {
 		return err

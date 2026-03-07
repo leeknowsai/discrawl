@@ -159,8 +159,11 @@ Runs FTS search over archived messages.
 bin/discrawl search "panic: nil pointer"
 bin/discrawl search --guild 123456789012345678 "payment failed"
 bin/discrawl search --channel billing --author steipete --limit 50 "invoice"
+bin/discrawl search --include-empty "GitHub"
 bin/discrawl --json search "websocket closed"
 ```
+
+By default, `search` skips empty-body rows such as attachment-only or system-style messages. Use `--include-empty` to opt back in.
 
 ### `messages`
 
@@ -170,6 +173,7 @@ Lists exact message slices by channel, author, and time range.
 bin/discrawl messages --channel maintainers --days 7 --all
 bin/discrawl messages --channel "#maintainers" --since 2026-03-01T00:00:00Z
 bin/discrawl messages --channel 1456744319972282449 --author steipete --limit 50
+bin/discrawl messages --channel maintainers --days 7 --all --include-empty
 bin/discrawl --json messages --channel maintainers --days 3
 ```
 
@@ -178,6 +182,7 @@ Notes:
 - `--channel` accepts a channel id, exact name, `#name`, or partial name match
 - `--days` is shorthand for "since now minus N days"
 - `--all` removes the safety limit; default is `200`
+- empty-body rows are skipped by default; `--include-empty` opts back in
 - at least one filter is required
 
 ### `sql`

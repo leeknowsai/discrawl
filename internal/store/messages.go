@@ -7,12 +7,13 @@ import (
 )
 
 type MessageListOptions struct {
-	GuildIDs []string
-	Channel  string
-	Author   string
-	Since    time.Time
-	Before   time.Time
-	Limit    int
+	GuildIDs     []string
+	Channel      string
+	Author       string
+	Since        time.Time
+	Before       time.Time
+	Limit        int
+	IncludeEmpty bool
 }
 
 type MessageRow struct {
@@ -53,6 +54,9 @@ func (s *Store) ListMessages(ctx context.Context, opts MessageListOptions) ([]Me
 	if !opts.Before.IsZero() {
 		clauses = append(clauses, "m.created_at < ?")
 		args = append(args, opts.Before.UTC().Format(timeLayout))
+	}
+	if !opts.IncludeEmpty {
+		clauses = append(clauses, "trim(coalesce(m.content, '')) <> ''")
 	}
 
 	query := `

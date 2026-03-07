@@ -62,12 +62,27 @@ func TestStatusSearchSQLAndListings(t *testing.T) {
 		NormalizedContent: "panic locked database",
 		RawJSON:           `{}`,
 	}))
+	require.NoError(t, s.UpsertMessage(ctx, store.MessageRecord{
+		ID:                "m2",
+		GuildID:           "g1",
+		ChannelID:         "c1",
+		ChannelName:       "general",
+		AuthorID:          "u1",
+		AuthorName:        "Peter",
+		MessageType:       0,
+		CreatedAt:         time.Now().UTC().Add(time.Second).Format(time.RFC3339Nano),
+		Content:           "",
+		NormalizedContent: "",
+		RawJSON:           `{"author":{"username":"Peter"}}`,
+	}))
 	require.NoError(t, s.Close())
 
 	tests := [][]string{
 		{"--config", cfgPath, "status"},
 		{"--config", cfgPath, "search", "panic"},
+		{"--config", cfgPath, "search", "--include-empty", "Peter"},
 		{"--config", cfgPath, "messages", "--channel", "general", "--days", "7", "--all"},
+		{"--config", cfgPath, "messages", "--channel", "general", "--days", "7", "--all", "--include-empty"},
 		{"--config", cfgPath, "sql", "select count(*) as total from messages"},
 		{"--config", cfgPath, "members", "list"},
 		{"--config", cfgPath, "channels", "list"},
@@ -257,6 +272,8 @@ func TestRuntimeHelpersAndSubcommands(t *testing.T) {
 		require.NoError(t, rt.runMembers([]string{"list"}))
 		rt.now = func() time.Time { return time.Date(2026, 3, 8, 12, 0, 0, 0, time.UTC) }
 		require.NoError(t, rt.runMessages([]string{"--channel", "#general", "--days", "7", "--all"}))
+		require.NoError(t, rt.runMessages([]string{"--channel", "#general", "--days", "7", "--all", "--include-empty"}))
+		require.NoError(t, rt.runSearch([]string{"--include-empty", "Peter"}))
 		require.NoError(t, rt.runChannels([]string{"show", "c1"}))
 		require.NoError(t, rt.runChannels([]string{"list"}))
 		require.NoError(t, rt.runStatus(nil))

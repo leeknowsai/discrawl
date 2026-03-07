@@ -57,6 +57,19 @@ func TestStoreReadWriteAndSearch(t *testing.T) {
 		NormalizedContent: "rate limit discussion",
 		RawJSON:           `{}`,
 	}))
+	require.NoError(t, s.UpsertMessage(ctx, MessageRecord{
+		ID:                "m3",
+		GuildID:           "g1",
+		ChannelID:         "c1",
+		ChannelName:       "general",
+		AuthorID:          "u1",
+		AuthorName:        "Peter",
+		MessageType:       0,
+		CreatedAt:         time.Now().UTC().Add(2 * time.Second).Format(time.RFC3339Nano),
+		Content:           "",
+		NormalizedContent: "",
+		RawJSON:           `{"author":{"username":"Peter"}}`,
+	}))
 
 	results, err := s.SearchMessages(ctx, SearchOptions{Query: "panic", Limit: 10})
 	require.NoError(t, err)
@@ -71,6 +84,14 @@ func TestStoreReadWriteAndSearch(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, results)
 
+	results, err = s.SearchMessages(ctx, SearchOptions{Query: "Peter", Limit: 10})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+
+	results, err = s.SearchMessages(ctx, SearchOptions{Query: "Peter", Limit: 10, IncludeEmpty: true})
+	require.NoError(t, err)
+	require.Len(t, results, 3)
+
 	members, err := s.Members(ctx, "g1", "pet", 10)
 	require.NoError(t, err)
 	require.Len(t, members, 1)
@@ -84,14 +105,14 @@ func TestStoreReadWriteAndSearch(t *testing.T) {
 	require.Equal(t, 1, status.GuildCount)
 	require.Equal(t, 2, status.ChannelCount)
 	require.Equal(t, 1, status.ThreadCount)
-	require.Equal(t, 2, status.MessageCount)
+	require.Equal(t, 3, status.MessageCount)
 	require.Equal(t, 1, status.MemberCount)
 	require.Equal(t, "Guild", status.DefaultGuildName)
 
 	oldest, newest, err := s.ChannelMessageBounds(ctx, "c1")
 	require.NoError(t, err)
 	require.Equal(t, "m1", oldest)
-	require.Equal(t, "m1", newest)
+	require.Equal(t, "m3", newest)
 
 	messageRows, err := s.ListMessages(ctx, MessageListOptions{
 		Channel: "#general",
@@ -334,6 +355,34 @@ func TestListMessagesFiltersAndLimit(t *testing.T) {
 	require.Equal(t, "fallback-user", rows[0].AuthorName)
 	require.True(t, rows[0].Pinned)
 	require.True(t, rows[0].HasAttachments)
+
+	require.NoError(t, s.UpsertMessage(ctx, MessageRecord{
+		ID:                "m5",
+		GuildID:           "g1",
+		ChannelID:         "c1",
+		ChannelName:       "maintainers",
+		AuthorID:          "u1",
+		AuthorName:        "Peter",
+		MessageType:       0,
+		CreatedAt:         "2026-03-05T10:00:00Z",
+		Content:           "",
+		NormalizedContent: "",
+		RawJSON:           `{"author":{"username":"peter"}}`,
+	}))
+
+	rows, err = s.ListMessages(ctx, MessageListOptions{
+		Channel: "maintainers",
+	})
+	require.NoError(t, err)
+	require.Len(t, rows, 3)
+
+	rows, err = s.ListMessages(ctx, MessageListOptions{
+		Channel:      "maintainers",
+		IncludeEmpty: true,
+	})
+	require.NoError(t, err)
+	require.Len(t, rows, 4)
+	require.Equal(t, "m5", rows[3].MessageID)
 }
 
 func TestUpsertMessagesBatch(t *testing.T) {

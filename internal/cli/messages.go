@@ -22,6 +22,7 @@ func (r *runtime) runMessages(args []string) error {
 	before := fs.String("before", "", "")
 	limit := fs.Int("limit", defaultMessageLimit, "")
 	all := fs.Bool("all", false, "")
+	includeEmpty := fs.Bool("include-empty", false, "")
 	guildsFlag := fs.String("guilds", "", "")
 	guildFlag := fs.String("guild", "", "")
 	if err := fs.Parse(args); err != nil {
@@ -72,12 +73,13 @@ func (r *runtime) runMessages(args []string) error {
 	}
 
 	rows, err := r.store.ListMessages(r.ctx, store.MessageListOptions{
-		GuildIDs: guildIDs,
-		Channel:  *channel,
-		Author:   *author,
-		Since:    sinceTime,
-		Before:   beforeTime,
-		Limit:    *limit,
+		GuildIDs:     guildIDs,
+		Channel:      *channel,
+		Author:       *author,
+		Since:        sinceTime,
+		Before:       beforeTime,
+		Limit:        *limit,
+		IncludeEmpty: *includeEmpty,
 	})
 	if err != nil {
 		return err

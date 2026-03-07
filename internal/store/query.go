@@ -56,6 +56,9 @@ func (s *Store) SearchMessages(ctx context.Context, opts SearchOptions) ([]Searc
 		clauses = append(clauses, "(message_fts.author_id = ? or message_fts.author_name like ?)")
 		args = append(args, opts.Author, "%"+opts.Author+"%")
 	}
+	if !opts.IncludeEmpty {
+		clauses = append(clauses, "trim(coalesce(m.content, '')) <> ''")
+	}
 	args = append(args, opts.Limit)
 	query := `
 		select
@@ -103,6 +106,9 @@ func (s *Store) searchFallback(ctx context.Context, opts SearchOptions) ([]Searc
 	if strings.TrimSpace(opts.Author) != "" {
 		clauses = append(clauses, "(m.author_id = ? or m.raw_json like ?)")
 		args = append(args, opts.Author, "%"+opts.Author+"%")
+	}
+	if !opts.IncludeEmpty {
+		clauses = append(clauses, "trim(coalesce(m.content, '')) <> ''")
 	}
 	args = append(args, opts.Limit)
 	rows, err := s.db.QueryContext(ctx, `
