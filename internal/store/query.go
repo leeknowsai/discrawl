@@ -20,6 +20,19 @@ func (s *Store) GetSyncState(ctx context.Context, scope string) (string, error) 
 	return cursor.String, nil
 }
 
+func (s *Store) ChannelMessageBounds(ctx context.Context, channelID string) (string, string, error) {
+	var oldest sql.NullString
+	var newest sql.NullString
+	if err := s.db.QueryRowContext(ctx, `
+		select min(id), max(id)
+		from messages
+		where channel_id = ?
+	`, channelID).Scan(&oldest, &newest); err != nil {
+		return "", "", err
+	}
+	return oldest.String, newest.String, nil
+}
+
 func (s *Store) SearchMessages(ctx context.Context, opts SearchOptions) ([]SearchResult, error) {
 	if strings.TrimSpace(opts.Query) == "" {
 		return nil, nil

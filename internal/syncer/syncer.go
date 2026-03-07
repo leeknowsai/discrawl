@@ -341,6 +341,7 @@ func (s *Syncer) syncChannelMessages(ctx context.Context, guildID string, channe
 	if err != nil {
 		return 0, err
 	}
+	storedLatest := latest
 	backfillCursor, err := s.store.GetSyncState(ctx, backfillScope)
 	if err != nil {
 		return 0, err
@@ -348,6 +349,24 @@ func (s *Syncer) syncChannelMessages(ctx context.Context, guildID string, channe
 	backfillComplete, err := s.store.GetSyncState(ctx, completeScope)
 	if err != nil {
 		return 0, err
+	}
+	if full && (latest == "" || backfillCursor == "") {
+		oldestStored, newestStored, err := s.store.ChannelMessageBounds(ctx, channel.ID)
+		if err != nil {
+			return 0, err
+		}
+		if latest == "" && newestStored != "" {
+			latest = newestStored
+		}
+		if backfillCursor == "" && oldestStored != "" {
+			backfillCursor = oldestStored
+		}
+	}
+	if full && storedLatest != "" && backfillCursor == "" && backfillComplete == "" {
+		if err := s.store.SetSyncState(ctx, completeScope, "1"); err != nil {
+			return 0, err
+		}
+		backfillComplete = "1"
 	}
 	messageCount := 0
 	newest := latest

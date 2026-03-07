@@ -87,6 +87,11 @@ func TestStoreReadWriteAndSearch(t *testing.T) {
 	require.Equal(t, 2, status.MessageCount)
 	require.Equal(t, 1, status.MemberCount)
 	require.Equal(t, "Guild", status.DefaultGuildName)
+
+	oldest, newest, err := s.ChannelMessageBounds(ctx, "c1")
+	require.NoError(t, err)
+	require.Equal(t, "m1", oldest)
+	require.Equal(t, "m1", newest)
 }
 
 func TestReadOnlyQueryGuards(t *testing.T) {

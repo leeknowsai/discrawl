@@ -500,6 +500,124 @@ func TestSyncFullBackfillResumesFromCheckpoint(t *testing.T) {
 	require.Len(t, results, 1)
 }
 
+func TestSyncFullSeedsBackfillFromStoredMessages(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s, err := store.Open(ctx, filepath.Join(t.TempDir(), "discrawl.db"))
+	require.NoError(t, err)
+	defer func() { _ = s.Close() }()
+
+	require.NoError(t, s.UpsertGuild(ctx, store.GuildRecord{ID: "g1", Name: "Guild", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertChannel(ctx, store.ChannelRecord{ID: "c1", GuildID: "g1", Kind: "text", Name: "general", RawJSON: `{}`}))
+	for id := 250; id >= 151; id-- {
+		require.NoError(t, s.UpsertMessage(ctx, store.MessageRecord{
+			ID:                fmt.Sprintf("%03d", id),
+			GuildID:           "g1",
+			ChannelID:         "c1",
+			ChannelName:       "general",
+			AuthorID:          "u1",
+			AuthorName:        "user",
+			CreatedAt:         time.Now().UTC().Format(time.RFC3339Nano),
+			Content:           fmt.Sprintf("msg-%03d", id),
+			NormalizedContent: fmt.Sprintf("msg-%03d", id),
+			RawJSON:           `{}`,
+		}))
+	}
+
+	messages := make([]*discordgo.Message, 0, 150)
+	for id := 250; id >= 101; id-- {
+		messages = append(messages, &discordgo.Message{
+			ID:        fmt.Sprintf("%03d", id),
+			GuildID:   "g1",
+			ChannelID: "c1",
+			Content:   fmt.Sprintf("msg-%03d", id),
+			Timestamp: time.Now().UTC(),
+			Author:    &discordgo.User{ID: "u1", Username: "user"},
+		})
+	}
+
+	client := &fakeClient{
+		guilds: []*discordgo.UserGuild{{ID: "g1", Name: "Guild"}},
+		guildByID: map[string]*discordgo.Guild{
+			"g1": {ID: "g1", Name: "Guild"},
+		},
+		channels: map[string][]*discordgo.Channel{
+			"g1": {{ID: "c1", GuildID: "g1", Name: "general", Type: discordgo.ChannelTypeGuildText}},
+		},
+		messages: map[string][]*discordgo.Message{
+			"c1": messages,
+		},
+	}
+
+	svc := New(client, s, nil)
+	stats, err := svc.Sync(ctx, SyncOptions{Full: true, Concurrency: 1})
+	require.NoError(t, err)
+	require.Equal(t, 50, stats.Messages)
+
+	latest, err := s.GetSyncState(ctx, channelLatestScope("c1"))
+	require.NoError(t, err)
+	require.Equal(t, "250", latest)
+
+	complete, err := s.GetSyncState(ctx, channelHistoryCompleteScope("c1"))
+	require.NoError(t, err)
+	require.Equal(t, "1", complete)
+}
+
+func TestSyncMarksLegacyLatestStateAsComplete(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s, err := store.Open(ctx, filepath.Join(t.TempDir(), "discrawl.db"))
+	require.NoError(t, err)
+	defer func() { _ = s.Close() }()
+
+	require.NoError(t, s.UpsertGuild(ctx, store.GuildRecord{ID: "g1", Name: "Guild", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertChannel(ctx, store.ChannelRecord{ID: "c1", GuildID: "g1", Kind: "text", Name: "general", RawJSON: `{}`}))
+	require.NoError(t, s.UpsertMessage(ctx, store.MessageRecord{
+		ID:                "250",
+		GuildID:           "g1",
+		ChannelID:         "c1",
+		ChannelName:       "general",
+		AuthorID:          "u1",
+		AuthorName:        "user",
+		CreatedAt:         time.Now().UTC().Format(time.RFC3339Nano),
+		Content:           "msg-250",
+		NormalizedContent: "msg-250",
+		RawJSON:           `{}`,
+	}))
+	require.NoError(t, s.SetSyncState(ctx, channelLatestScope("c1"), "250"))
+
+	client := &fakeClient{
+		guilds: []*discordgo.UserGuild{{ID: "g1", Name: "Guild"}},
+		guildByID: map[string]*discordgo.Guild{
+			"g1": {ID: "g1", Name: "Guild"},
+		},
+		channels: map[string][]*discordgo.Channel{
+			"g1": {{ID: "c1", GuildID: "g1", Name: "general", Type: discordgo.ChannelTypeGuildText}},
+		},
+		messages: map[string][]*discordgo.Message{
+			"c1": {{
+				ID:        "250",
+				GuildID:   "g1",
+				ChannelID: "c1",
+				Content:   "msg-250",
+				Timestamp: time.Now().UTC(),
+				Author:    &discordgo.User{ID: "u1", Username: "user"},
+			}},
+		},
+	}
+
+	svc := New(client, s, nil)
+	stats, err := svc.Sync(ctx, SyncOptions{Full: true, Concurrency: 1})
+	require.NoError(t, err)
+	require.Equal(t, 0, stats.Messages)
+
+	complete, err := s.GetSyncState(ctx, channelHistoryCompleteScope("c1"))
+	require.NoError(t, err)
+	require.Equal(t, "1", complete)
+}
+
 func TestSyncMarksEmptyChannelComplete(t *testing.T) {
 	t.Parallel()
 
