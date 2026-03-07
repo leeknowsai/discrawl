@@ -21,10 +21,50 @@ Search defaults to all guilds. `sync` and `tail` default to the configured defau
 - a Discord bot token the bot can use to read the target guilds
 - bot permissions for the channels you want archived
 
+### Discord Bot Setup
+
+`discrawl` needs a real bot token. Not a user token.
+
+Minimum practical setup:
+
+1. Create or reuse a Discord application in the Discord developer portal.
+2. Add a bot user to that application.
+3. Invite the bot to the target guilds.
+4. Enable these intents for the bot:
+   - `Server Members Intent`
+   - `Message Content Intent`
+5. Ensure the bot can at least:
+   - view channels
+   - read message history
+
+Without those intents/permissions, `sync`, `tail`, member snapshots, or message content archiving will be partial or fail.
+
+### Bot Token Sources
+
 Token resolution:
 
 1. OpenClaw config, if `discord.token_source` is not `env`
 2. `DISCORD_BOT_TOKEN` or the configured `discord.token_env`
+
+`discrawl` accepts either raw token text or a value prefixed with `Bot `. It normalizes that automatically.
+
+Fastest env-only path:
+
+```bash
+export DISCORD_BOT_TOKEN="your-bot-token"
+bin/discrawl doctor
+bin/discrawl init
+```
+
+If you keep shell secrets in `~/.profile`, add:
+
+```bash
+export DISCORD_BOT_TOKEN="your-bot-token"
+```
+
+Then reload your shell before running `discrawl`.
+
+If you already use OpenClaw, `discrawl` can reuse the Discord token from `~/.openclaw/openclaw.json` by default.
 
 Default runtime paths:
 
@@ -60,11 +100,20 @@ Env-only setup:
 
 ```bash
 export DISCORD_BOT_TOKEN="..."
+bin/discrawl doctor
 bin/discrawl init
 bin/discrawl sync --full
 ```
 
 `init` discovers accessible guilds and writes `~/.discrawl/config.toml`. If exactly one guild is available, that guild becomes the default automatically.
+
+`doctor` is the fastest sanity check:
+
+- confirms config can be loaded
+- shows where the token was resolved from
+- verifies bot auth
+- shows how many guilds the bot can access
+- verifies DB + FTS wiring
 
 ## Commands
 
