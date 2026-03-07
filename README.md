@@ -90,6 +90,8 @@ bin/discrawl sync --guilds 123,456 --concurrency 8
 bin/discrawl sync --channels 111,222 --since 2026-03-01T00:00:00Z
 ```
 
+`sync` already uses parallel channel workers. `--concurrency` overrides the default, and the default is auto-sized from `GOMAXPROCS` with a floor of `8` and a cap of `32`.
+
 ### `tail`
 
 Runs the live Gateway tail and periodic repair loop.
@@ -172,7 +174,7 @@ account = "default"
 token_env = "DISCORD_BOT_TOKEN"
 
 [sync]
-concurrency = 4
+concurrency = 16
 repair_every = "6h"
 full_history = true
 
@@ -186,6 +188,8 @@ model = "text-embedding-3-small"
 api_key_env = "OPENAI_API_KEY"
 batch_size = 64
 ```
+
+The value above is an example. `init` writes an auto-sized default based on the host: `min(32, max(8, GOMAXPROCS*2))`.
 
 Config override rules:
 

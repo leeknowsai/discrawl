@@ -17,7 +17,9 @@ func TestNormalizeFillsDefaults(t *testing.T) {
 	require.Equal(t, "openclaw", cfg.Discord.TokenSource)
 	require.Equal(t, "default", cfg.Discord.Account)
 	require.Equal(t, DefaultTokenEnv, cfg.Discord.TokenEnv)
-	require.Equal(t, 4, cfg.Sync.Concurrency)
+	require.Equal(t, defaultSyncConcurrency(), cfg.Sync.Concurrency)
+	require.GreaterOrEqual(t, cfg.Sync.Concurrency, 8)
+	require.LessOrEqual(t, cfg.Sync.Concurrency, 32)
 	require.Equal(t, "fts", cfg.Search.DefaultMode)
 }
 

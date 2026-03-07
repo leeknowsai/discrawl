@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -101,7 +102,7 @@ func Default() Config {
 			TokenEnv:       DefaultTokenEnv,
 		},
 		Sync: SyncConfig{
-			Concurrency: 4,
+			Concurrency: defaultSyncConcurrency(),
 			RepairEvery: "6h",
 			FullHistory: true,
 		},
@@ -115,6 +116,18 @@ func Default() Config {
 				BatchSize: 64,
 			},
 		},
+	}
+}
+
+func defaultSyncConcurrency() int {
+	workers := runtime.GOMAXPROCS(0) * 2
+	switch {
+	case workers < 8:
+		return 8
+	case workers > 32:
+		return 32
+	default:
+		return workers
 	}
 }
 
@@ -198,7 +211,7 @@ func (c *Config) Normalize() error {
 		c.Discord.TokenEnv = DefaultTokenEnv
 	}
 	if c.Sync.Concurrency <= 0 {
-		c.Sync.Concurrency = 4
+		c.Sync.Concurrency = defaultSyncConcurrency()
 	}
 	if c.Sync.RepairEvery == "" {
 		c.Sync.RepairEvery = "6h"
