@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -103,6 +104,9 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, fmt.Errorf("mkdir db dir: %w", err)
 	}
+	if err := ensureDBFile(path); err != nil {
+		return nil, err
+	}
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -116,12 +120,44 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
+	if err := tightenDBFilePerms(path); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	store := &Store{db: db}
 	if err := store.migrate(ctx); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	return store, nil
+}
+
+func ensureDBFile(path string) error {
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("stat db file: %w", err)
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil && !os.IsExist(err) {
+		return fmt.Errorf("create db file: %w", err)
+	}
+	if file != nil {
+		if closeErr := file.Close(); closeErr != nil {
+			return fmt.Errorf("close db file: %w", closeErr)
+		}
+	}
+	return nil
+}
+
+func tightenDBFilePerms(path string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("chmod db file: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) Close() error {
