@@ -400,17 +400,35 @@ func TestHelpers(t *testing.T) {
 	t.Parallel()
 
 	require.Equal(t, "101", maxSnowflake("100", "101"))
+	require.Equal(t, "abc", maxSnowflake("", "abc"))
+	require.Equal(t, "abc", maxSnowflake("abc", ""))
+	require.Equal(t, "zzz", maxSnowflake("abc", "zzz"))
 	require.Equal(t, "text", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildText}))
+	require.Equal(t, "category", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildCategory}))
 	require.Equal(t, "thread_private", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildPrivateThread}))
+	require.Equal(t, "thread_public", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildPublicThread}))
+	require.Equal(t, "thread_announcement", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildNewsThread}))
 	require.Equal(t, "announcement", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildNews}))
+	require.Equal(t, "forum", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildForum}))
 	require.Equal(t, "voice", channelKind(&discordgo.Channel{Type: discordgo.ChannelTypeGuildVoice}))
+	require.Equal(t, "type_99", channelKind(&discordgo.Channel{Type: discordgo.ChannelType(99)}))
+	require.Equal(t, discordgo.ChannelTypeGuildCategory, channelTypeFromKind("category"))
+	require.Equal(t, discordgo.ChannelTypeGuildNews, channelTypeFromKind("announcement"))
+	require.Equal(t, discordgo.ChannelTypeGuildForum, channelTypeFromKind("forum"))
 	require.Equal(t, discordgo.ChannelTypeGuildPublicThread, channelTypeFromKind("thread_public"))
+	require.Equal(t, discordgo.ChannelTypeGuildPrivateThread, channelTypeFromKind("thread_private"))
+	require.Equal(t, discordgo.ChannelTypeGuildNewsThread, channelTypeFromKind("thread_announcement"))
+	require.Equal(t, discordgo.ChannelTypeGuildVoice, channelTypeFromKind("voice"))
 	require.Equal(t, discordgo.ChannelTypeGuildText, channelTypeFromKind("unknown"))
 	require.True(t, isThreadParent(&discordgo.Channel{Type: discordgo.ChannelTypeGuildForum}))
+	require.True(t, isThreadParent(&discordgo.Channel{Type: discordgo.ChannelTypeGuildText}))
 	require.False(t, isThreadParent(&discordgo.Channel{Type: discordgo.ChannelTypeGuildVoice}))
 	require.True(t, isMessageChannel(&discordgo.Channel{Type: discordgo.ChannelTypeGuildNewsThread}))
+	require.True(t, isMessageChannel(&discordgo.Channel{Type: discordgo.ChannelTypeGuildPrivateThread}))
 	require.False(t, isMessageChannel(&discordgo.Channel{Type: discordgo.ChannelTypeGuildCategory}))
 	require.Len(t, selectGuilds([]*discordgo.UserGuild{{ID: "g1"}, {ID: "g2"}}, []string{"g2"}), 1)
+	require.Len(t, selectGuilds([]*discordgo.UserGuild{{ID: "g1"}}, nil), 1)
+	require.Nil(t, makeGuildSet(nil))
 
 	record := toChannelRecord(&discordgo.Channel{
 		ID:       "t1",
@@ -428,11 +446,34 @@ func TestHelpers(t *testing.T) {
 	require.True(t, record.IsLocked)
 	require.True(t, record.IsPrivateThread)
 
+	sorted := mapsToSlice(map[string]*discordgo.Channel{
+		"b": {ID: "b", Position: 2},
+		"a": {ID: "a", Position: 1},
+		"c": {ID: "c", Position: 1},
+	})
+	require.Equal(t, []string{"a", "c", "b"}, []string{sorted[0].ID, sorted[1].ID, sorted[2].ID})
+
+	selected := selectStoredChannels([]store.ChannelRow{
+		{ID: "c2", GuildID: "g1", Kind: "thread_private", Name: "thread", Position: 2, IsArchived: true, IsLocked: true, ArchiveTimestamp: time.Unix(10, 0).UTC()},
+		{ID: "c1", GuildID: "g1", Kind: "text", Name: "general", Position: 1},
+	}, []string{"c2", "c1"})
+	require.Len(t, selected, 2)
+	require.Equal(t, "c1", selected[0].ID)
+	require.Nil(t, selected[0].ThreadMetadata)
+	require.Equal(t, "c2", selected[1].ID)
+	require.NotNil(t, selected[1].ThreadMetadata)
+	require.True(t, selected[1].ThreadMetadata.Archived)
+
 	handler := &tailHandler{guilds: makeGuildSet([]string{"g1"})}
 	require.True(t, handler.allowGuild("g1"))
 	require.False(t, handler.allowGuild("g2"))
+	require.Equal(t, "", displayName(nil))
 	require.Equal(t, "Nick", displayName(&discordgo.Member{Nick: "Nick", User: &discordgo.User{Username: "user"}}))
 	require.Equal(t, "Global", displayName(&discordgo.Member{User: &discordgo.User{GlobalName: "Global", Username: "user"}}))
+	require.Equal(t, "user", displayName(&discordgo.Member{User: &discordgo.User{Username: "user"}}))
+	require.True(t, isMissingAccess(fmt.Errorf("HTTP 403 Forbidden")))
+	require.True(t, isMissingAccess(fmt.Errorf("Missing Access")))
+	require.False(t, isMissingAccess(fmt.Errorf("boom")))
 }
 
 func TestRunTail(t *testing.T) {
