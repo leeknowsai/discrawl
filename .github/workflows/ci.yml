@@ -32,6 +32,30 @@ jobs:
         with:
           version: v2.11.1
 
+      - name: Install analyzers
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+          go install mvdan.cc/gofumpt@v0.7.0
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.9
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Staticcheck
+        run: "$(go env GOPATH)/bin/staticcheck" ./...
+
+      - name: Gofumpt
+        run: |
+          changed="$("$(go env GOPATH)/bin/gofumpt" -l .)"
+          if [ -n "$changed" ]; then
+            printf 'gofumpt wants changes in:\n%s\n' "$changed"
+            exit 1
+          fi
+
+      - name: Gosec
+        run: |
+          "$(go env GOPATH)/bin/gosec" -exclude=G101,G115,G202,G301,G304 ./...
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -47,6 +71,9 @@ jobs:
 
       - name: Test with coverage
         run: go test ./... -coverprofile=coverage.out
+
+      - name: Test with race detector
+        run: go test -race ./...
 
       - name: Enforce coverage floor
         run: |

@@ -262,6 +262,7 @@ func TestTailReceivesGatewayEvents(t *testing.T) {
 	client, err := New("token")
 	require.NoError(t, err)
 	defer func() { _ = client.Close() }()
+	client.session.ShouldReconnectOnError = false
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -353,6 +354,7 @@ func TestTailFailsFastWhenWorkerQueueFills(t *testing.T) {
 	client, err := New("token")
 	require.NoError(t, err)
 	defer func() { _ = client.Close() }()
+	client.session.ShouldReconnectOnError = false
 	client.tailWorkerCount = 1
 	client.tailQueueSize = 1
 	client.tailHandlerTimeout = time.Second

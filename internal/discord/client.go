@@ -296,13 +296,17 @@ func (c *Client) enqueueTailTask(
 }
 
 func (c *Client) runTailTask(ctx context.Context, task func(context.Context) error) (err error) {
-	taskCtx := ctx
-	cancel := func() {}
 	if c.tailHandlerTimeout > 0 {
-		taskCtx, cancel = context.WithTimeout(ctx, c.tailHandlerTimeout)
-	} else {
-		taskCtx, cancel = context.WithCancel(ctx)
+		taskCtx, cancel := context.WithTimeout(ctx, c.tailHandlerTimeout)
+		defer cancel()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				err = fmt.Errorf("tail handler panic: %v", recovered)
+			}
+		}()
+		return task(taskCtx)
 	}
+	taskCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	defer func() {
 		if recovered := recover(); recovered != nil {

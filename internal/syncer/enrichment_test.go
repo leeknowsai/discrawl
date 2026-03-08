@@ -12,8 +12,6 @@ import (
 )
 
 func TestBuildMessageMutationIncludesAttachmentTextAndMentions(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("stack trace line one\nstack trace line two"))
 	}))
@@ -72,8 +70,6 @@ func TestShouldFetchAttachmentText(t *testing.T) {
 }
 
 func TestBuildMessageMutationSkipsBinaryResponseEvenWhenAttachmentLooksTextual(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		_, _ = w.Write([]byte{0x7f, 'E', 'L', 'F', 0x02, 0x01})
@@ -106,8 +102,6 @@ func TestBuildMessageMutationSkipsBinaryResponseEvenWhenAttachmentLooksTextual(t
 }
 
 func TestBuildMessageMutationSkipsOversizedAttachmentResponses(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Header().Set("Content-Length", "999999")
@@ -141,8 +135,6 @@ func TestBuildMessageMutationSkipsOversizedAttachmentResponses(t *testing.T) {
 }
 
 func TestBuildMessageMutationRespectsAttachmentTextOptOut(t *testing.T) {
-	t.Parallel()
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		_, _ = w.Write([]byte("stack trace line one"))
