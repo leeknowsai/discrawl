@@ -54,7 +54,7 @@ func (r *runtime) runInit(args []string) error {
 	defer func() { _ = client.Close() }()
 	syncerFactory := r.newSyncer
 	if syncerFactory == nil {
-		syncerFactory = func(client syncer.Client, s *store.Store, logger *slog.Logger) syncService {
+		syncerFactory = func(client syncer.Client, s store.DataStore, logger *slog.Logger) syncService {
 			return syncer.New(client, s, logger)
 		}
 	}

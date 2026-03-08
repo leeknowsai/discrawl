@@ -1,0 +1,66 @@
+package members
+
+import (
+	"github.com/steipete/discrawl/internal/store"
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ List(guildID string, guildName string, members []store.MemberRow, query string) {
+	@layout.AppShell("Members", guildID, guildName) {
+		<div class="members-page">
+			<div class="members-header">
+				<h2>Members</h2>
+				<form hx-get={ "/app/g/" + guildID + "/members" } hx-target="#member-results" hx-push-url="true">
+					<input
+						type="search"
+						name="q"
+						value={ query }
+						placeholder="Search members..."
+						hx-get={ "/app/g/" + guildID + "/members" }
+						hx-trigger="input changed delay:300ms"
+						hx-target="#member-results"
+					/>
+				</form>
+			</div>
+			<div id="member-results">
+				@MemberResults(members)
+			</div>
+		</div>
+	}
+}
+
+templ MemberResults(members []store.MemberRow) {
+	if len(members) == 0 {
+		<p>No members found.</p>
+	} else {
+		<table class="member-table">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Username</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, m := range members {
+					<tr>
+						<td>{ displayName(m) }</td>
+						<td>{ m.Username }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+func displayName(m store.MemberRow) string {
+	if m.Nick != "" {
+		return m.Nick
+	}
+	if m.DisplayName != "" {
+		return m.DisplayName
+	}
+	if m.GlobalName != "" {
+		return m.GlobalName
+	}
+	return m.Username
+}

@@ -29,7 +29,7 @@ type Client interface {
 
 type Syncer struct {
 	client                Client
-	store                 *store.Store
+	store                 store.DataStore
 	logger                *slog.Logger
 	attachmentTextEnabled bool
 }
@@ -52,7 +52,7 @@ type SyncStats struct {
 	Messages int `json:"messages"`
 }
 
-func New(client Client, store *store.Store, logger *slog.Logger) *Syncer {
+func New(client Client, store store.DataStore, logger *slog.Logger) *Syncer {
 	if logger == nil {
 		logger = slog.Default()
 	}

@@ -1,0 +1,25 @@
+package guild
+
+import (
+	"github.com/steipete/discrawl/internal/store"
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ Selector(guilds []store.MetaGuild) {
+	@layout.Base("Guilds") {
+		<main class="container" style="padding-top:2rem;">
+			<h1>Your Guilds</h1>
+			if len(guilds) == 0 {
+				<p>No guilds found. Make sure discrawl has synced at least one guild.</p>
+			} else {
+				<div class="guild-grid">
+					for _, g := range guilds {
+						<a href={ templ.SafeURL("/app/g/" + g.ID) } class="guild-card">
+							<div class="guild-card-name">{ g.Name }</div>
+						</a>
+					}
+				</div>
+			}
+		</main>
+	}
+}

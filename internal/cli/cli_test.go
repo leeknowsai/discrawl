@@ -217,7 +217,7 @@ func TestRuntimeInitSyncTailAndDoctor(t *testing.T) {
 			logger:     discardLogger(),
 			openStore:  store.Open,
 			newDiscord: func(config.Config) (discordClient, error) { return fakeDiscord, nil },
-			newSyncer: func(syncer.Client, *store.Store, *slog.Logger) syncService {
+			newSyncer: func(syncer.Client, store.DataStore, *slog.Logger) syncService {
 				return fakeSync
 			},
 		}
@@ -270,7 +270,7 @@ func TestRuntimeConfiguresAttachmentTextOnSyncer(t *testing.T) {
 		logger:     discardLogger(),
 		openStore:  store.Open,
 		newDiscord: func(config.Config) (discordClient, error) { return &fakeDiscordClient{}, nil },
-		newSyncer: func(syncer.Client, *store.Store, *slog.Logger) syncService {
+		newSyncer: func(syncer.Client, store.DataStore, *slog.Logger) syncService {
 			return fakeSync
 		},
 	}

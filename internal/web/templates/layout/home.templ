@@ -1,0 +1,15 @@
+package layout
+
+templ Home(loggedIn bool) {
+	@Base("Home") {
+		<main class="container" style="text-align:center; padding-top:4rem;">
+			<h1>discrawl</h1>
+			<p>Discord Server Visualizer</p>
+			if loggedIn {
+				<a href="/app/guilds" role="button">View Guilds</a>
+			} else {
+				<a href="/auth/login" role="button">Login with Discord</a>
+			}
+		</main>
+	}
+}

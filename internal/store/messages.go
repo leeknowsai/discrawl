@@ -7,13 +7,15 @@ import (
 )
 
 type MessageListOptions struct {
-	GuildIDs     []string
-	Channel      string
-	Author       string
-	Since        time.Time
-	Before       time.Time
-	Limit        int
-	IncludeEmpty bool
+	GuildIDs       []string
+	Channel        string
+	Author         string
+	Since          time.Time
+	Before         time.Time
+	BeforeID       string // Discord snowflake cursor for ID-based pagination
+	Limit          int
+	IncludeEmpty   bool
+	ExcludeDeleted bool // When true, filters out messages with deleted_at set
 }
 
 type MentionListOptions struct {
@@ -66,8 +68,21 @@ func (s *Store) ListMessages(ctx context.Context, opts MessageListOptions) ([]Me
 		clauses = append(clauses, "m.created_at < ?")
 		args = append(args, opts.Before.UTC().Format(timeLayout))
 	}
+	if opts.BeforeID != "" {
+		clauses = append(clauses, "m.id < ?")
+		args = append(args, opts.BeforeID)
+	}
+	if opts.ExcludeDeleted {
+		clauses = append(clauses, "m.deleted_at is null")
+	}
 	if !opts.IncludeEmpty {
 		clauses = append(clauses, "trim(coalesce(m.normalized_content, '')) <> ''")
+	}
+
+	// When using BeforeID cursor, order newest-first for Discord-like UX.
+	orderClause := "m.created_at asc, m.id asc"
+	if opts.BeforeID != "" {
+		orderClause = "m.id desc"
 	}
 
 	query := `
@@ -98,7 +113,7 @@ func (s *Store) ListMessages(ctx context.Context, opts MessageListOptions) ([]Me
 		left join channels c on c.id = m.channel_id
 		left join members mem on mem.guild_id = m.guild_id and mem.user_id = m.author_id
 		where ` + strings.Join(clauses, " and ") + `
-		order by m.created_at asc, m.id asc
+		order by ` + orderClause + `
 	`
 	if opts.Limit > 0 {
 		query += ` limit ?`

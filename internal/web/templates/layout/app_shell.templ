@@ -1,0 +1,25 @@
+package layout
+
+templ AppShell(title string, guildID string, guildName string) {
+	@Base(title) {
+		<nav class="sidebar" id="sidebar">
+			<div class="sidebar-header">
+				<h2>{ guildName }</h2>
+			</div>
+			<div id="channel-list" hx-get={ "/app/g/" + guildID + "/channels" } hx-trigger="load" hx-swap="innerHTML">
+				<p>Loading channels...</p>
+			</div>
+		</nav>
+		<main class="content">
+			<header class="topbar">
+				<div id="topbar-content"></div>
+				<div class="user-menu">
+					<a href="/auth/logout" class="btn-logout">Logout</a>
+				</div>
+			</header>
+			<div id="content">
+				{ children... }
+			</div>
+		</main>
+	}
+}

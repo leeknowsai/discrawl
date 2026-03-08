@@ -1,0 +1,60 @@
+package members
+
+import (
+	"fmt"
+	"github.com/steipete/discrawl/internal/store"
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ Profile(guildID string, guildName string, member store.MemberRow, msgs []store.MessageRow) {
+	@layout.AppShell("Member Profile", guildID, guildName) {
+		<div class="member-profile">
+			<div class="profile-header">
+				<h2>{ profileDisplayName(member) }</h2>
+				<dl class="profile-meta">
+					<dt>Username</dt>
+					<dd>{ member.Username }</dd>
+					if member.Nick != "" {
+						<dt>Nickname</dt>
+						<dd>{ member.Nick }</dd>
+					}
+					if !member.JoinedAt.IsZero() {
+						<dt>Joined</dt>
+						<dd>{ member.JoinedAt.Format("2006-01-02") }</dd>
+					}
+					<dt>User ID</dt>
+					<dd>{ member.UserID }</dd>
+				</dl>
+			</div>
+			<div class="profile-messages">
+				<h3>Recent Messages ({ fmt.Sprintf("%d", len(msgs)) })</h3>
+				if len(msgs) == 0 {
+					<p>No messages found.</p>
+				} else {
+					<ul class="message-list profile-message-list">
+						for _, msg := range msgs {
+							<li class="message-item">
+								<span class="message-time">{ msg.CreatedAt.Format("2006-01-02 15:04") }</span>
+								<span class="message-channel">#{ msg.ChannelName }</span>
+								<span class="message-content">{ msg.Content }</span>
+							</li>
+						}
+					</ul>
+				}
+			</div>
+		</div>
+	}
+}
+
+func profileDisplayName(m store.MemberRow) string {
+	if m.DisplayName != "" {
+		return m.DisplayName
+	}
+	if m.Nick != "" {
+		return m.Nick
+	}
+	if m.GlobalName != "" {
+		return m.GlobalName
+	}
+	return m.Username
+}

@@ -93,7 +93,7 @@ type runtime struct {
 	syncer     syncService
 	openStore  func(context.Context, string) (*store.Store, error)
 	newDiscord func(config.Config) (discordClient, error)
-	newSyncer  func(syncer.Client, *store.Store, *slog.Logger) syncService
+	newSyncer  func(syncer.Client, store.DataStore, *slog.Logger) syncService
 	now        func() time.Time
 }
 
@@ -136,6 +136,10 @@ func (r *runtime) dispatch(rest []string) error {
 		return r.withServices(false, func() error { return r.runChannels(rest[1:]) })
 	case "status":
 		return r.withServices(false, func() error { return r.runStatus(rest[1:]) })
+	case "serve":
+		return r.runServe(rest[1:])
+	case "migrate-db":
+		return r.runMigrateDB(rest[1:])
 	case "doctor":
 		return r.runDoctor(rest[1:])
 	default:
@@ -183,7 +187,7 @@ func (r *runtime) withServices(withDiscord bool, fn func() error) error {
 		defer func() { _ = r.client.Close() }()
 		syncerFactory := r.newSyncer
 		if syncerFactory == nil {
-			syncerFactory = func(client syncer.Client, s *store.Store, logger *slog.Logger) syncService {
+			syncerFactory = func(client syncer.Client, s store.DataStore, logger *slog.Logger) syncService {
 				return syncer.New(client, s, logger)
 			}
 		}

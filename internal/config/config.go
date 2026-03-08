@@ -24,11 +24,23 @@ type Config struct {
 	DefaultGuildID string        `toml:"default_guild_id,omitempty"`
 	GuildIDs       []string      `toml:"guild_ids,omitempty"`
 	DBPath         string        `toml:"db_path"`
+	DataDir        string        `toml:"data_dir,omitempty"` // per-guild DB directory (contains guilds/ and meta.db)
 	CacheDir       string        `toml:"cache_dir"`
 	LogDir         string        `toml:"log_dir"`
 	Discord        DiscordConfig `toml:"discord"`
 	Sync           SyncConfig    `toml:"sync"`
 	Search         SearchConfig  `toml:"search"`
+	Web            WebConfig     `toml:"web"`
+}
+
+type WebConfig struct {
+	Port             int    `toml:"port"`
+	Host             string `toml:"host"`
+	SessionSecret    string `toml:"session_secret"`
+	OAuthClientID    string `toml:"oauth_client_id"`
+	OAuthClientIDEnv string `toml:"oauth_client_id_env"`
+	OAuthSecretEnv   string `toml:"oauth_secret_env"`
+	OAuthRedirectURI string `toml:"oauth_redirect_uri"`
 }
 
 type DiscordConfig struct {
@@ -96,6 +108,12 @@ func Default() Config {
 		CacheDir:       filepath.Join(base, "cache"),
 		LogDir:         filepath.Join(base, "logs"),
 		DefaultGuildID: "",
+		Web: WebConfig{
+			Port:             8080,
+			Host:             "localhost",
+			OAuthClientIDEnv: "DISCORD_OAUTH_CLIENT_ID",
+			OAuthSecretEnv:   "DISCORD_OAUTH_SECRET",
+		},
 		Discord: DiscordConfig{
 			TokenSource:    "openclaw",
 			OpenClawConfig: filepath.Join(home, ".openclaw", "openclaw.json"),
@@ -252,6 +270,29 @@ func (c Config) EffectiveDefaultGuildID() string {
 
 func (c Config) SearchGuildDefaults() []string {
 	return nil
+}
+
+// IsPerGuildMode returns true if the data directory contains a guilds/ subdirectory,
+// indicating per-guild DB mode (post-migration).
+func (c Config) IsPerGuildMode() bool {
+	dataDir := c.DataDir
+	if dataDir == "" {
+		dataDir = filepath.Dir(c.DBPath)
+	}
+	expanded, err := ExpandPath(dataDir)
+	if err != nil {
+		return false
+	}
+	info, err := os.Stat(filepath.Join(expanded, "guilds"))
+	return err == nil && info.IsDir()
+}
+
+// EffectiveDataDir returns the data directory, defaulting to the DB path's parent.
+func (c Config) EffectiveDataDir() string {
+	if c.DataDir != "" {
+		return c.DataDir
+	}
+	return filepath.Dir(c.DBPath)
 }
 
 func (c Config) AttachmentTextEnabled() bool {

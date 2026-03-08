@@ -461,3 +461,7 @@ func nullable(v string) any {
 	}
 	return v
 }
+
+func marshalJSON(v any) ([]byte, error) {
+	return json.Marshal(v)
+}

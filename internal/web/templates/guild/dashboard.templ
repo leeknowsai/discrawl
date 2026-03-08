@@ -1,0 +1,37 @@
+package guild
+
+import (
+	"fmt"
+	"github.com/steipete/discrawl/internal/store"
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ Dashboard(guildID string, guildName string, stats store.GuildStats) {
+	@layout.AppShell(guildName, guildID, guildName) {
+		<div class="dashboard">
+			<h2>{ guildName }</h2>
+			<div class="stats-grid">
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%d", stats.MessageCount) }</div>
+					<div class="stat-label">Messages</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%d", stats.MemberCount) }</div>
+					<div class="stat-label">Members</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%d", stats.ChannelCount) }</div>
+					<div class="stat-label">Channels</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value">{ fmt.Sprintf("%d", stats.ThreadCount) }</div>
+					<div class="stat-label">Threads</div>
+				</div>
+			</div>
+			<div class="dashboard-links">
+				<a href={ templ.SafeURL("/app/g/" + guildID + "/members") } role="button" class="outline">Members</a>
+				<a href={ templ.SafeURL("/app/g/" + guildID + "/search") } role="button" class="outline">Search</a>
+			</div>
+		</div>
+	}
+}

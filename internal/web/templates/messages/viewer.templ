@@ -1,0 +1,29 @@
+package messages
+
+import (
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ Viewer(guildID string, guildName string, channelID string, channelName string) {
+	@layout.AppShell(channelName, guildID, guildName) {
+		<div
+			class="message-viewer"
+			hx-ext="sse"
+			sse-connect={ "/api/v1/g/" + guildID + "/live" }
+		>
+			<div class="channel-header">
+				<span class="channel-hash">#</span>
+				<span class="channel-name">{ channelName }</span>
+			</div>
+			<div
+				id="message-list"
+				class="message-list"
+				hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages" }
+				hx-trigger="load"
+				hx-swap="innerHTML"
+			>
+				<p>Loading messages...</p>
+			</div>
+		</div>
+	}
+}

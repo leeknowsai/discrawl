@@ -1,0 +1,31 @@
+package guild
+
+import (
+	"github.com/steipete/discrawl/internal/store"
+)
+
+// Category groups channels under a parent (or the root).
+type Category struct {
+	ID       string
+	Name     string
+	Channels []store.ChannelRow
+}
+
+templ ChannelSidebar(guildID string, categories []Category) {
+	for _, cat := range categories {
+		if cat.Name != "" {
+			<div class="channel-category">{ cat.Name }</div>
+		}
+		for _, ch := range cat.Channels {
+			if ch.Kind == "text" || ch.Kind == "announcement" || ch.Kind == "forum" {
+				<a
+					href={ templ.SafeURL("/app/g/" + guildID + "/c/" + ch.ID) }
+					class="channel-item"
+					hx-get={ "/app/g/" + guildID + "/c/" + ch.ID + "/messages" }
+					hx-target="#content"
+					hx-push-url={ "/app/g/" + guildID + "/c/" + ch.ID }
+				># { ch.Name }</a>
+			}
+		}
+	}
+}

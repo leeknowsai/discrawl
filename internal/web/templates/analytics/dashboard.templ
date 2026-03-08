@@ -1,0 +1,40 @@
+package analytics
+
+import (
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ Dashboard(guildID string, guildName string) {
+	@layout.AppShell("Analytics", guildID, guildName) {
+		<div class="analytics-page">
+			<div class="analytics-header">
+				<h2>Analytics</h2>
+				<div class="analytics-controls">
+					<label for="days-filter">Period:</label>
+					<select id="days-filter" onchange="refreshCharts()">
+						<option value="7">Last 7 days</option>
+						<option value="30" selected>Last 30 days</option>
+						<option value="90">Last 90 days</option>
+					</select>
+				</div>
+			</div>
+			<input type="hidden" id="guild-id" value={ guildID }/>
+			<div class="analytics-grid">
+				<div class="chart-card chart-card--wide">
+					<h3 class="chart-title">Message Volume</h3>
+					<canvas id="msg-volume"></canvas>
+				</div>
+				<div class="chart-card">
+					<h3 class="chart-title">Top Members</h3>
+					<canvas id="top-members"></canvas>
+				</div>
+				<div class="chart-card">
+					<h3 class="chart-title">Channel Activity</h3>
+					<canvas id="channel-activity"></canvas>
+				</div>
+			</div>
+		</div>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+		<script src="/static/js/analytics.js"></script>
+	}
+}

@@ -41,7 +41,7 @@ func (s *Syncer) RunTail(ctx context.Context, guildIDs []string, repairEvery tim
 
 type tailHandler struct {
 	guilds                map[string]struct{}
-	store                 *store.Store
+	store                 store.DataStore
 	client                Client
 	attachmentTextEnabled bool
 }

@@ -1,0 +1,61 @@
+package messages
+
+import (
+	"fmt"
+	"time"
+	"github.com/steipete/discrawl/internal/store"
+)
+
+// MessageGroup collapses consecutive messages from the same author within 5 min.
+type MessageGroup struct {
+	AuthorID   string
+	AuthorName string
+	Messages   []store.MessageRow
+}
+
+// DaySection groups messages by calendar day.
+type DaySection struct {
+	Day    time.Time
+	Groups []MessageGroup
+}
+
+templ MessageList(guildID string, channelID string, sections []DaySection, oldestID string) {
+	if len(sections) == 0 {
+		<p class="no-messages">No messages found.</p>
+	} else {
+		// Infinite scroll trigger: load older messages when this sentinel scrolls into view.
+		if oldestID != "" {
+			<div
+				hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages?before=" + oldestID }
+				hx-trigger="intersect once"
+				hx-swap="beforebegin"
+				hx-target="this"
+				class="load-more-sentinel"
+			></div>
+		}
+		for _, section := range sections {
+			<div class="day-divider">
+				<span>{ section.Day.Format("January 2, 2006") }</span>
+			</div>
+			for _, group := range section.Groups {
+				<div class="message-group">
+					<div class="message-author">{ group.AuthorName }</div>
+					for _, msg := range group.Messages {
+						<div class="message-row" id={ "msg-" + msg.MessageID }>
+							<span class="message-time">{ msg.CreatedAt.Format("15:04") }</span>
+							<span class="message-content">{ msg.Content }</span>
+							if msg.HasAttachments {
+								<span class="message-attachment-indicator" title="has attachments">📎</span>
+							}
+						</div>
+					}
+				</div>
+			}
+		}
+	}
+}
+
+// FormatCount formats an int for display.
+func FormatCount(n int) string {
+	return fmt.Sprintf("%d", n)
+}

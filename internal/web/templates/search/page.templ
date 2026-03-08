@@ -1,0 +1,64 @@
+package search
+
+import (
+	"github.com/steipete/discrawl/internal/store"
+	"github.com/steipete/discrawl/internal/web/templates/layout"
+)
+
+templ Page(guildID string, guildName string, results []store.SearchResult, query string, channel string, author string) {
+	@layout.AppShell("Search", guildID, guildName) {
+		<div class="search-page">
+			<h2>Search</h2>
+			<form
+				hx-get={ "/app/g/" + guildID + "/search" }
+				hx-target="#search-results"
+				hx-push-url="true"
+			>
+				<div class="search-inputs">
+					<input
+						type="search"
+						name="q"
+						value={ query }
+						placeholder="Search messages..."
+						required
+					/>
+					<input
+						type="text"
+						name="channel"
+						value={ channel }
+						placeholder="Channel (optional)"
+					/>
+					<input
+						type="text"
+						name="author"
+						value={ author }
+						placeholder="Author (optional)"
+					/>
+					<button type="submit">Search</button>
+				</div>
+			</form>
+			<div id="search-results">
+				@SearchResults(guildID, results)
+			</div>
+		</div>
+	}
+}
+
+templ SearchResults(guildID string, results []store.SearchResult) {
+	if len(results) == 0 {
+		<p>No results.</p>
+	} else {
+		<div class="search-result-list">
+			for _, r := range results {
+				<div class="search-result">
+					<div class="search-result-meta">
+						<a href={ templ.SafeURL("/app/g/" + guildID + "/c/" + r.ChannelID) } class="result-channel">#{ r.ChannelName }</a>
+						<span class="result-author">{ r.AuthorName }</span>
+						<span class="result-time">{ r.CreatedAt.Format("2006-01-02 15:04") }</span>
+					</div>
+					<div class="search-result-content">{ r.Content }</div>
+				</div>
+			}
+		</div>
+	}
+}

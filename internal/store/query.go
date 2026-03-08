@@ -280,6 +280,41 @@ func (s *Store) Status(ctx context.Context, dbPath, defaultGuildID string) (Stat
 	return status, rows.Err()
 }
 
+// GuildStats holds per-guild aggregate counts.
+type GuildStats struct {
+	MessageCount  int       `json:"message_count"`
+	MemberCount   int       `json:"member_count"`
+	ChannelCount  int       `json:"channel_count"`
+	ThreadCount   int       `json:"thread_count"`
+	LastMessageAt time.Time `json:"last_message_at,omitempty"`
+}
+
+// GuildStats returns aggregate counts for a specific guild.
+func (s *Store) GuildStats(ctx context.Context, guildID string) (GuildStats, error) {
+	var stats GuildStats
+	queries := []struct {
+		query  string
+		target *int
+		args   []any
+	}{
+		{`select count(*) from messages where guild_id = ? and deleted_at is null`, &stats.MessageCount, []any{guildID}},
+		{`select count(*) from members where guild_id = ?`, &stats.MemberCount, []any{guildID}},
+		{`select count(*) from channels where guild_id = ? and kind not like 'thread_%'`, &stats.ChannelCount, []any{guildID}},
+		{`select count(*) from channels where guild_id = ? and kind like 'thread_%'`, &stats.ThreadCount, []any{guildID}},
+	}
+	for _, q := range queries {
+		if err := s.db.QueryRowContext(ctx, q.query, q.args...).Scan(q.target); err != nil {
+			return GuildStats{}, err
+		}
+	}
+	var lastMsg sql.NullString
+	_ = s.db.QueryRowContext(ctx,
+		`select max(created_at) from messages where guild_id = ? and deleted_at is null`, guildID,
+	).Scan(&lastMsg)
+	stats.LastMessageAt = parseTime(lastMsg.String)
+	return stats, nil
+}
+
 func (s *Store) ReadOnlyQuery(ctx context.Context, query string) ([]string, [][]string, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
