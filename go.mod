@@ -1,6 +1,6 @@
 module github.com/steipete/discrawl
 
-go 1.26.0
+go 1.26.1
 
 require (
 	github.com/bwmarrin/discordgo v0.29.0
