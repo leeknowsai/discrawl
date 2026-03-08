@@ -93,6 +93,28 @@ jobs:
       - name: Build
         run: go build ./cmd/discrawl
 
+  deps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Setup Go
+        uses: actions/setup-go@v6.3.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify module cache
+        run: go mod verify
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Run govulncheck
+        run: "$(go env GOPATH)/bin/govulncheck" ./...
+
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 15
