@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Members - Community Server</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            primary: '#1e1f22',
+                            secondary: '#2b2d31',
+                            tertiary: '#232428',
+                            text: '#f2f3f5',
+                            muted: '#949ba4',
+                            accent: '#5865f2',
+                            accentHover: '#4752c4',
+                            border: '#3f4147',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-discord-primary text-discord-text">
+    <!-- NOTE: Member list with filtering, sorting, and detailed profile view modal -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Channel Sidebar -->
+        <div class="w-60 bg-discord-secondary flex flex-col border-r border-discord-border">
+            <!-- Server Header -->
+            <div class="h-12 px-4 flex items-center justify-between border-b border-discord-border hover:bg-discord-tertiary transition cursor-pointer">
+                <h2 class="font-semibold truncate">Community Server</h2>
+                <svg class="w-4 h-4 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex-1 overflow-y-auto px-2 py-2">
+                <div>
+                    <div class="px-2 py-1 text-xs font-semibold text-discord-muted uppercase flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                        <span>Quick Links</span>
+                    </div>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded bg-discord-tertiary text-discord-text transition text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <span>Members</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <span>Search</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Bar -->
+            <div class="h-12 bg-discord-secondary border-b border-discord-border flex items-center justify-between px-4">
+                <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-discord-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span class="font-semibold">Server Members</span>
+                    <span class="text-sm text-discord-muted">1,247 total</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="px-3 py-1.5 bg-discord-tertiary hover:bg-discord-border rounded text-sm transition">
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="bg-discord-secondary border-b border-discord-border p-4">
+                <div class="flex flex-col md:flex-row gap-3">
+                    <!-- Search -->
+                    <div class="flex-1">
+                        <input type="text" placeholder="Search members..." class="w-full bg-discord-tertiary border border-discord-border rounded-lg px-4 py-2 text-discord-text placeholder-discord-muted focus:outline-none focus:border-discord-accent transition">
+                    </div>
+                    <!-- Filters -->
+                    <div class="flex gap-2">
+                        <select class="bg-discord-tertiary border border-discord-border rounded-lg px-3 py-2 text-discord-text focus:outline-none focus:border-discord-accent transition">
+                            <option>All Members</option>
+                            <option>Online</option>
+                            <option>Offline</option>
+                        </select>
+                        <select class="bg-discord-tertiary border border-discord-border rounded-lg px-3 py-2 text-discord-text focus:outline-none focus:border-discord-accent transition">
+                            <option>Sort by: Join Date</option>
+                            <option>Sort by: Messages</option>
+                            <option>Sort by: Name</option>
+                            <option>Sort by: Activity</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Member List -->
+            <!-- NOTE: Scrollable list with member stats, click to view profile -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="max-w-6xl mx-auto p-6">
+                    <!-- Member Cards Grid -->
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Member Card 1 -->
+                        <div class="bg-discord-secondary border border-discord-border rounded-lg p-4 hover:border-discord-accent transition cursor-pointer" onclick="document.getElementById('profile-modal').classList.remove('hidden')">
+                            <div class="flex items-start gap-3">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center font-bold text-xl">AK</div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-discord-secondary"></div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">AlexKnight</h3>
+                                    <p class="text-xs text-discord-muted">@alexknight</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="px-2 py-0.5 bg-discord-accent rounded text-xs">Admin</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-discord-border grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <div class="text-lg font-bold">8.4K</div>
+                                    <div class="text-xs text-discord-muted">Messages</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">245</div>
+                                    <div class="text-xs text-discord-muted">Days</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">98%</div>
+                                    <div class="text-xs text-discord-muted">Active</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member Card 2 -->
+                        <div class="bg-discord-secondary border border-discord-border rounded-lg p-4 hover:border-discord-accent transition cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center font-bold text-xl">SJ</div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-discord-secondary"></div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">SarahJones</h3>
+                                    <p class="text-xs text-discord-muted">@sarahj</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="px-2 py-0.5 bg-purple-600 rounded text-xs">Moderator</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-discord-border grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <div class="text-lg font-bold">7.1K</div>
+                                    <div class="text-xs text-discord-muted">Messages</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">198</div>
+                                    <div class="text-xs text-discord-muted">Days</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">95%</div>
+                                    <div class="text-xs text-discord-muted">Active</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member Card 3 -->
+                        <div class="bg-discord-secondary border border-discord-border rounded-lg p-4 hover:border-discord-accent transition cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xl">MC</div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-discord-secondary"></div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">MikeChen</h3>
+                                    <p class="text-xs text-discord-muted">@mikechen</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="px-2 py-0.5 bg-discord-tertiary rounded text-xs">Member</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-discord-border grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <div class="text-lg font-bold">6.9K</div>
+                                    <div class="text-xs text-discord-muted">Messages</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">312</div>
+                                    <div class="text-xs text-discord-muted">Days</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">89%</div>
+                                    <div class="text-xs text-discord-muted">Active</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member Card 4 -->
+                        <div class="bg-discord-secondary border border-discord-border rounded-lg p-4 hover:border-discord-accent transition cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center font-bold text-xl">EP</div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-yellow-500 rounded-full border-2 border-discord-secondary"></div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">EmilyPark</h3>
+                                    <p class="text-xs text-discord-muted">@emilyp</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="px-2 py-0.5 bg-discord-tertiary rounded text-xs">Member</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-discord-border grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <div class="text-lg font-bold">5.7K</div>
+                                    <div class="text-xs text-discord-muted">Messages</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">156</div>
+                                    <div class="text-xs text-discord-muted">Days</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">92%</div>
+                                    <div class="text-xs text-discord-muted">Active</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member Card 5 -->
+                        <div class="bg-discord-secondary border border-discord-border rounded-lg p-4 hover:border-discord-accent transition cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-teal-600 rounded-full flex items-center justify-center font-bold text-xl">LW</div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-discord-secondary"></div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">LisaWang</h3>
+                                    <p class="text-xs text-discord-muted">@lisawang</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="px-2 py-0.5 bg-discord-tertiary rounded text-xs">Member</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-discord-border grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <div class="text-lg font-bold">4.2K</div>
+                                    <div class="text-xs text-discord-muted">Messages</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">89</div>
+                                    <div class="text-xs text-discord-muted">Days</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">87%</div>
+                                    <div class="text-xs text-discord-muted">Active</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member Card 6 -->
+                        <div class="bg-discord-secondary border border-discord-border rounded-lg p-4 hover:border-discord-accent transition cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="relative">
+                                    <div class="w-14 h-14 bg-pink-600 rounded-full flex items-center justify-center font-bold text-xl">RD</div>
+                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-discord-secondary"></div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">RachelDavis</h3>
+                                    <p class="text-xs text-discord-muted">@racheld</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <div class="px-2 py-0.5 bg-discord-tertiary rounded text-xs">Member</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-discord-border grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <div class="text-lg font-bold">3.8K</div>
+                                    <div class="text-xs text-discord-muted">Messages</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">124</div>
+                                    <div class="text-xs text-discord-muted">Days</div>
+                                </div>
+                                <div>
+                                    <div class="text-lg font-bold">76%</div>
+                                    <div class="text-xs text-discord-muted">Active</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Load More -->
+                    <div class="text-center mt-6">
+                        <button class="px-6 py-2 bg-discord-tertiary hover:bg-discord-border rounded-lg transition">
+                            Load More Members
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <!-- NOTE: Detailed member profile modal with activity stats and message history -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onclick="this.classList.add('hidden')">
+        <div class="bg-discord-secondary rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <!-- Profile Header -->
+            <div class="bg-gradient-to-br from-green-600 to-green-800 h-32 rounded-t-lg"></div>
+            <div class="px-6 pb-6">
+                <div class="flex items-start gap-4 -mt-12">
+                    <div class="relative">
+                        <div class="w-24 h-24 bg-green-600 rounded-full border-4 border-discord-secondary flex items-center justify-center font-bold text-4xl">AK</div>
+                        <div class="absolute bottom-1 right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-discord-secondary"></div>
+                    </div>
+                    <div class="flex-1 mt-12">
+                        <h2 class="text-2xl font-bold">AlexKnight</h2>
+                        <p class="text-discord-muted">@alexknight</p>
+                    </div>
+                    <button onclick="document.getElementById('profile-modal').classList.add('hidden')" class="p-2 hover:bg-discord-tertiary rounded transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Roles -->
+                <div class="mt-4">
+                    <h3 class="text-sm font-semibold text-discord-muted uppercase mb-2">Roles</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <div class="px-3 py-1 bg-discord-accent rounded-full text-sm">Admin</div>
+                        <div class="px-3 py-1 bg-green-600 rounded-full text-sm">Developer</div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Member Stats</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-discord-tertiary rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold">8,420</div>
+                            <div class="text-xs text-discord-muted mt-1">Total Messages</div>
+                        </div>
+                        <div class="bg-discord-tertiary rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold">245</div>
+                            <div class="text-xs text-discord-muted mt-1">Days Active</div>
+                        </div>
+                        <div class="bg-discord-tertiary rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold">98%</div>
+                            <div class="text-xs text-discord-muted mt-1">Activity Rate</div>
+                        </div>
+                        <div class="bg-discord-tertiary rounded-lg p-3 text-center">
+                            <div class="text-2xl font-bold">34</div>
+                            <div class="text-xs text-discord-muted mt-1">Msgs/Day</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Member Info -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Member Information</h3>
+                    <div class="space-y-2 bg-discord-tertiary rounded-lg p-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-discord-muted">Joined Server</span>
+                            <span>March 8, 2025</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-discord-muted">First Message</span>
+                            <span>March 9, 2025</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-discord-muted">Last Active</span>
+                            <span>2 hours ago</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-discord-muted">Most Active Channel</span>
+                            <span class="text-discord-accent">#general</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Chart -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Activity (Last 7 Days)</h3>
+                    <div class="bg-discord-tertiary rounded-lg p-4">
+                        <div class="flex items-end justify-between gap-2 h-32">
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 55%"></div>
+                                <span class="text-xs text-discord-muted">M</span>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 72%"></div>
+                                <span class="text-xs text-discord-muted">T</span>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 88%"></div>
+                                <span class="text-xs text-discord-muted">W</span>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 65%"></div>
+                                <span class="text-xs text-discord-muted">T</span>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 100%"></div>
+                                <span class="text-xs text-discord-muted">F</span>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 45%"></div>
+                                <span class="text-xs text-discord-muted">S</span>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div class="w-full bg-discord-accent rounded-t" style="height: 38%"></div>
+                                <span class="text-xs text-discord-muted">S</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTE: Mobile responsive - grid adjusts to single column on small screens -->
+</body>
+</html>

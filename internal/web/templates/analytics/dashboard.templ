@@ -1,53 +1,302 @@
 package analytics
 
 import (
+	"fmt"
 	"github.com/steipete/discrawl/internal/web/templates/layout"
 )
 
-templ Dashboard(guildID string, guildName string) {
-	@layout.AppShell("Analytics", guildID, guildName) {
-		<div class="analytics-page">
-			<div class="analytics-header">
-				<h2>Analytics</h2>
-				<div class="analytics-controls">
-					<label for="days-filter">Period:</label>
-					<select id="days-filter" onchange="refreshCharts()">
-						<option value="7">Last 7 days</option>
-						<option value="30" selected>Last 30 days</option>
-						<option value="90">Last 90 days</option>
-					</select>
-					<button id="custom-range-toggle" type="button" onclick="toggleCustomRange()">Custom Range</button>
+type MetricCard struct {
+	Title       string
+	Value       string
+	Icon        string
+	IconBg      string
+	TrendValue  string
+	TrendLabel  string
+	TrendUp     bool
+	TrendColor  string
+}
+
+type ChartData struct {
+	Labels []string
+	Values []int
+}
+
+type AnalyticsData struct {
+	Metrics           []MetricCard
+	MessageActivity   ChartData
+	ChannelBreakdown  ChartData
+	TopContributors   []TopContributor
+	HourlyActivity    []int
+	TimeRange         string
+}
+
+type TopContributor struct {
+	Name         string
+	MessageCount int
+	Percentage   int
+}
+
+templ Dashboard(guildID string, guildName string, data AnalyticsData) {
+	@layout.Base("Analytics - " + guildName) {
+		<div class="flex h-screen overflow-hidden">
+			<!-- Sidebar -->
+			<div class="w-60 bg-discord-secondary flex flex-col border-r border-discord-border">
+				<div class="h-12 px-4 flex items-center justify-between border-b border-discord-border hover:bg-discord-tertiary transition cursor-pointer">
+					<h2 class="font-semibold truncate">{ guildName }</h2>
+					<svg class="w-4 h-4 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+					</svg>
+				</div>
+				<div class="flex-1 overflow-y-auto px-2 py-2">
+					<div>
+						<div class="px-2 py-1 text-xs font-semibold text-discord-muted uppercase flex items-center gap-1">
+							<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+							</svg>
+							<span>Quick Links</span>
+						</div>
+						<a href={ templ.SafeURL("/app/g/" + guildID) } class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+							</svg>
+							<span>Dashboard</span>
+						</a>
+						<a href={ templ.SafeURL("/app/g/" + guildID + "/analytics") } class="flex items-center gap-2 px-2 py-1.5 rounded bg-discord-tertiary text-discord-text transition text-sm">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+							</svg>
+							<span>Analytics</span>
+						</a>
+						<a href={ templ.SafeURL("/app/g/" + guildID + "/members") } class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+							</svg>
+							<span>Members</span>
+						</a>
+						<a href={ templ.SafeURL("/app/g/" + guildID + "/search") } class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+							</svg>
+							<span>Search</span>
+						</a>
+					</div>
+					<!-- Analytics Navigation -->
+					<div class="mt-6">
+						<div class="px-2 py-1 text-xs font-semibold text-discord-muted uppercase">Analytics Views</div>
+						<div class="space-y-1 mt-2">
+							<button class="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-discord-accent/20 text-discord-text transition text-sm text-left">
+								<span class="truncate">Overview</span>
+							</button>
+							<button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm text-left">
+								<span class="truncate">Engagement</span>
+							</button>
+							<button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm text-left">
+								<span class="truncate">Growth</span>
+							</button>
+							<button class="w-full flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm text-left">
+								<span class="truncate">Content</span>
+							</button>
+						</div>
+					</div>
 				</div>
 			</div>
-			<div id="custom-range-picker" class="custom-range-picker" style="display:none;">
-				<label for="date-from">From:</label>
-				<input type="date" id="date-from" name="date-from"/>
-				<label for="date-to">To:</label>
-				<input type="date" id="date-to" name="date-to"/>
-				<button type="button" onclick="applyCustomRange()">Apply</button>
-			</div>
-			<input type="hidden" id="guild-id" value={ guildID }/>
-			<div id="overview-cards" class="overview-cards"></div>
-			<div class="analytics-grid">
-				<div class="chart-card chart-card--wide">
-					<h3 class="chart-title">Message Volume</h3>
-					<canvas id="msg-volume"></canvas>
+			<!-- Main Content -->
+			<div class="flex-1 flex flex-col overflow-hidden">
+				<!-- Top Bar with Time Range Selector -->
+				<div class="h-12 bg-discord-secondary border-b border-discord-border flex items-center justify-between px-4">
+					<div class="flex items-center gap-3">
+						<svg class="w-5 h-5 text-discord-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+						</svg>
+						<span class="font-semibold">Analytics Dashboard</span>
+					</div>
+					<div class="flex items-center gap-3">
+						<div class="flex gap-1 bg-discord-tertiary rounded p-1">
+							<button class={ "px-3 py-1 rounded text-xs transition", getTimeRangeClass("7", data.TimeRange) } hx-get={ "/app/g/" + guildID + "/analytics?range=7" } hx-target="#analytics-content" hx-swap="innerHTML">7D</button>
+							<button class={ "px-3 py-1 rounded text-xs transition", getTimeRangeClass("30", data.TimeRange) } hx-get={ "/app/g/" + guildID + "/analytics?range=30" } hx-target="#analytics-content" hx-swap="innerHTML">30D</button>
+							<button class={ "px-3 py-1 rounded text-xs transition", getTimeRangeClass("90", data.TimeRange) } hx-get={ "/app/g/" + guildID + "/analytics?range=90" } hx-target="#analytics-content" hx-swap="innerHTML">90D</button>
+							<button class={ "px-3 py-1 rounded text-xs transition", getTimeRangeClass("365", data.TimeRange) } hx-get={ "/app/g/" + guildID + "/analytics?range=365" } hx-target="#analytics-content" hx-swap="innerHTML">1Y</button>
+						</div>
+						<button class="p-2 hover:bg-discord-tertiary rounded transition" title="Export Data">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+							</svg>
+						</button>
+					</div>
 				</div>
-				<div class="chart-card chart-card--wide">
-					<h3 class="chart-title">Activity Heatmap</h3>
-					<canvas id="activity-heatmap"></canvas>
-				</div>
-				<div class="chart-card">
-					<h3 class="chart-title">Top Members</h3>
-					<canvas id="top-members"></canvas>
-				</div>
-				<div class="chart-card">
-					<h3 class="chart-title">Channel Activity</h3>
-					<canvas id="channel-activity"></canvas>
+				<!-- Analytics Content -->
+				<div class="flex-1 overflow-y-auto p-6" id="analytics-content">
+					<div class="max-w-7xl mx-auto space-y-6">
+						<!-- Key Metrics Row -->
+						<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+							for _, metric := range data.Metrics {
+								@metricCard(metric)
+							}
+						</div>
+						<!-- Charts Row -->
+						<div class="grid lg:grid-cols-2 gap-6">
+							<!-- Message Activity Chart -->
+							<div class="bg-discord-secondary rounded-lg p-6 border border-discord-border">
+								<div class="flex items-center justify-between mb-6">
+									<h3 class="font-semibold text-lg">Message Activity</h3>
+								</div>
+								<div class="h-64 flex items-end justify-between gap-1">
+									for i, val := range data.MessageActivity.Values {
+										@barChartColumn(val, data.MessageActivity.Values, data.MessageActivity.Labels[i])
+									}
+								</div>
+							</div>
+							<!-- Channel Breakdown -->
+							<div class="bg-discord-secondary rounded-lg p-6 border border-discord-border">
+								<div class="flex items-center justify-between mb-6">
+									<h3 class="font-semibold text-lg">Channel Breakdown</h3>
+								</div>
+								<div class="space-y-3">
+									for i, label := range data.ChannelBreakdown.Labels {
+										@channelBar(label, data.ChannelBreakdown.Values[i], data.ChannelBreakdown.Values)
+									}
+								</div>
+							</div>
+						</div>
+						<!-- Top Contributors -->
+						if len(data.TopContributors) > 0 {
+							<div class="bg-discord-secondary rounded-lg p-6 border border-discord-border">
+								<h3 class="font-semibold text-lg mb-6">Top Contributors</h3>
+								<div class="space-y-4">
+									for _, contrib := range data.TopContributors {
+										@contributorRow(contrib)
+									}
+								</div>
+							</div>
+						}
+					</div>
 				</div>
 			</div>
 		</div>
-		<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-		<script src="/static/js/analytics.js"></script>
 	}
+}
+
+templ metricCard(metric MetricCard) {
+	<div class="bg-discord-secondary rounded-lg p-5 border border-discord-border">
+		<div class="flex items-start justify-between mb-3">
+			<div>
+				<div class="text-sm text-discord-muted mb-1">{ metric.Title }</div>
+				<div class="text-3xl font-bold">{ metric.Value }</div>
+			</div>
+			<div class={ "w-12 h-12 rounded-lg flex items-center justify-center", metric.IconBg }>
+				@templ.Raw(metric.Icon)
+			</div>
+		</div>
+		<div class="flex items-center gap-2 text-sm">
+			<span class={ "flex items-center gap-1", metric.TrendColor }>
+				if metric.TrendUp {
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+					</svg>
+				} else {
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+					</svg>
+				}
+				{ metric.TrendValue }
+			</span>
+			<span class="text-discord-muted">{ metric.TrendLabel }</span>
+		</div>
+	</div>
+}
+
+templ barChartColumn(value int, allValues []int, label string) {
+	<div class="flex-1 flex flex-col items-center gap-1">
+		<div class="w-full bg-discord-accent/80 rounded-t transition-all hover:bg-discord-accent cursor-pointer" style={ fmt.Sprintf("height: %d%%", getPercentHeight(value, allValues)) } title={ fmt.Sprintf("%d messages", value) }></div>
+		<span class="text-xs text-discord-muted">{ label }</span>
+	</div>
+}
+
+templ channelBar(channelName string, count int, allCounts []int) {
+	<div>
+		<div class="flex justify-between text-sm mb-1">
+			<span class="text-discord-text">#{ channelName }</span>
+			<span class="text-discord-muted">{ fmt.Sprintf("%d", count) }</span>
+		</div>
+		<div class="w-full bg-discord-tertiary rounded-full h-2">
+			<div class="bg-discord-accent rounded-full h-2 transition-all" style={ fmt.Sprintf("width: %d%%", getPercentWidth(count, allCounts)) }></div>
+		</div>
+	</div>
+}
+
+templ contributorRow(contrib TopContributor) {
+	<div class="flex items-center justify-between">
+		<div class="flex items-center gap-3">
+			<div class={ "w-10 h-10 rounded-full flex items-center justify-center font-bold", getContributorColor(contrib.Name) }>
+				{ getContributorInitials(contrib.Name) }
+			</div>
+			<span class="font-medium">{ contrib.Name }</span>
+		</div>
+		<div class="flex items-center gap-3">
+			<span class="text-discord-muted">{ fmt.Sprintf("%d messages", contrib.MessageCount) }</span>
+			<span class="text-sm text-discord-accent">{ fmt.Sprintf("%d%%", contrib.Percentage) }</span>
+		</div>
+	</div>
+}
+
+func getTimeRangeClass(rangeVal string, currentRange string) string {
+	if rangeVal == currentRange {
+		return "bg-discord-accent text-white"
+	}
+	return "text-discord-muted hover:bg-discord-border"
+}
+
+func getPercentHeight(value int, allValues []int) int {
+	if len(allValues) == 0 || value == 0 {
+		return 0
+	}
+	max := 0
+	for _, v := range allValues {
+		if v > max {
+			max = v
+		}
+	}
+	if max == 0 {
+		return 0
+	}
+	return (value * 100) / max
+}
+
+func getPercentWidth(value int, allValues []int) int {
+	if len(allValues) == 0 || value == 0 {
+		return 0
+	}
+	max := 0
+	for _, v := range allValues {
+		if v > max {
+			max = v
+		}
+	}
+	if max == 0 {
+		return 0
+	}
+	return (value * 100) / max
+}
+
+func getContributorColor(name string) string {
+	colors := []string{
+		"bg-green-600",
+		"bg-blue-600",
+		"bg-purple-600",
+		"bg-orange-600",
+		"bg-pink-600",
+	}
+	idx := len(name) % len(colors)
+	return colors[idx]
+}
+
+func getContributorInitials(name string) string {
+	if len(name) == 0 {
+		return "?"
+	}
+	parts := []rune(name)
+	if len(parts) < 2 {
+		return string(parts[0:1])
+	}
+	return string(parts[0:2])
 }

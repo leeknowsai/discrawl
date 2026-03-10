@@ -4,25 +4,83 @@ import (
 	"github.com/steipete/discrawl/internal/web/templates/layout"
 )
 
-templ Viewer(guildID string, guildName string, channelID string, channelName string) {
-	@layout.AppShell(channelName, guildID, guildName) {
-		<div
-			class="message-viewer"
-			hx-ext="sse"
-			sse-connect={ "/api/v1/g/" + guildID + "/live" }
-		>
-			<div class="channel-header">
-				<span class="channel-hash">#</span>
-				<span class="channel-name">{ channelName }</span>
+templ Viewer(guildID string, guildName string, channelID string, channelName string, channelTopic string) {
+	@layout.Base(channelName + " - " + guildName) {
+		<div class="flex h-screen overflow-hidden">
+			<!-- Channel Sidebar -->
+			<div class="w-60 bg-discord-secondary flex flex-col border-r border-discord-border">
+				<!-- Server Header -->
+				<div class="h-12 px-4 flex items-center justify-between border-b border-discord-border hover:bg-discord-tertiary transition cursor-pointer">
+					<h2 class="font-semibold truncate">{ guildName }</h2>
+					<svg class="w-4 h-4 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+					</svg>
+				</div>
+				<!-- Channel List -->
+				<div class="flex-1 overflow-y-auto px-2 py-2">
+					<div
+						id="channel-list-container"
+						hx-get={ "/app/g/" + guildID + "/api/channels-sidebar" }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+					>
+						<div class="px-2 py-1 text-xs text-discord-muted">Loading channels...</div>
+					</div>
+				</div>
 			</div>
-			<div
-				id="message-list"
-				class="message-list"
-				hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages" }
-				hx-trigger="load"
-				hx-swap="innerHTML"
-			>
-				<p>Loading messages...</p>
+			<!-- Main Chat Area -->
+			<div class="flex-1 flex flex-col">
+				<!-- Top Bar -->
+				<div class="h-12 bg-discord-secondary border-b border-discord-border flex items-center justify-between px-4">
+					<div class="flex items-center gap-3">
+						<span class="text-discord-muted">#</span>
+						<span class="font-semibold">{ channelName }</span>
+						if channelTopic != "" {
+							<div class="h-4 w-px bg-discord-border"></div>
+							<span class="text-sm text-discord-muted">{ channelTopic }</span>
+						}
+					</div>
+					<div class="flex items-center gap-3">
+						<a href={ templ.SafeURL("/app/g/" + guildID + "/search") } class="p-2 hover:bg-discord-tertiary rounded transition" title="Search">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+							</svg>
+						</a>
+						<a href={ templ.SafeURL("/app/g/" + guildID + "/members") } class="p-2 hover:bg-discord-tertiary rounded transition" title="Members">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+							</svg>
+						</a>
+					</div>
+				</div>
+				<!-- Messages Container -->
+				<div
+					class="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+					id="message-container"
+					hx-ext="sse"
+					sse-connect={ "/api/v1/g/" + guildID + "/live" }
+				>
+					<div
+						id="message-list"
+						hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages" }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+					>
+						<div class="text-center py-4 text-discord-muted">Loading messages...</div>
+					</div>
+				</div>
+				<!-- Message Input (Read-only in viewer) -->
+				<div class="p-4 bg-discord-secondary border-t border-discord-border">
+					<div class="bg-discord-tertiary rounded-lg px-4 py-3 text-discord-muted cursor-not-allowed opacity-50">
+						View-only mode - Message history from archived data
+					</div>
+					<div class="flex items-center gap-2 mt-2 text-xs text-discord-muted">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						<span id="message-count-info">Loading message count...</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	}

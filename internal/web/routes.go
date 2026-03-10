@@ -22,6 +22,10 @@ func (s *Server) routes(r chi.Router) {
 	// Static assets.
 	r.Handle("/static/*", http.StripPrefix("/static", http.FileServer(http.FS(static.Assets))))
 
+	// Mockup pages (served from ./mockup/ directory on disk).
+	r.Handle("/mockup/*", http.StripPrefix("/mockup", http.FileServer(http.Dir("mockup"))))
+	r.Handle("/mockup", http.RedirectHandler("/mockup/", http.StatusMovedPermanently))
+
 	// Auth routes.
 	r.Route("/auth", func(r chi.Router) {
 		r.Get("/login", auth.HandleLogin(s.sessionManager, s.oauthCfg))
@@ -46,7 +50,7 @@ func (s *Server) routes(r chi.Router) {
 
 			// Rate-limited endpoints.
 			r.With(s.rateLimiter.Middleware).Get("/search", handlers.HandleSearch(s.registry))
-			r.Get("/analytics", handlers.HandleAnalyticsDashboard())
+			r.Get("/analytics", handlers.HandleAnalyticsDashboard(s.registry))
 
 			r.Route("/c/{channelID}", func(r chi.Router) {
 				r.Get("/", handlers.HandleMessageViewer(s.registry))

@@ -20,16 +20,18 @@ func HandleSearch(registry *store.Registry) http.HandlerFunc {
 		guildID := chi.URLParam(r, "guildID")
 
 		q := r.URL.Query().Get("q")
-		channel := r.URL.Query().Get("channel")
-		author := r.URL.Query().Get("author")
+		channelFilter := r.URL.Query().Get("in")
+		authorFilter := r.URL.Query().Get("from")
+		afterFilter := r.URL.Query().Get("after")
+		beforeFilter := r.URL.Query().Get("before")
 
 		var results []store.SearchResult
 		if q != "" {
 			var err error
 			results, err = gs.SearchMessages(r.Context(), store.SearchOptions{
 				Query:   q,
-				Channel: channel,
-				Author:  author,
+				Channel: channelFilter,
+				Author:  authorFilter,
 				Limit:   50,
 			})
 			if err != nil {
@@ -40,6 +42,40 @@ func HandleSearch(registry *store.Registry) http.HandlerFunc {
 
 		guildName := resolveGuildName(r, registry, guildID)
 
+		// Build active filters
+		var filters []searchtmpl.SearchFilter
+		if authorFilter != "" {
+			filters = append(filters, searchtmpl.SearchFilter{
+				Type:  "from",
+				Value: authorFilter,
+				Label: "from: " + authorFilter,
+			})
+		}
+		if channelFilter != "" {
+			filters = append(filters, searchtmpl.SearchFilter{
+				Type:  "in",
+				Value: channelFilter,
+				Label: "in: #" + channelFilter,
+			})
+		}
+		if afterFilter != "" {
+			filters = append(filters, searchtmpl.SearchFilter{
+				Type:  "after",
+				Value: afterFilter,
+				Label: "after: " + afterFilter,
+			})
+		}
+		if beforeFilter != "" {
+			filters = append(filters, searchtmpl.SearchFilter{
+				Type:  "before",
+				Value: beforeFilter,
+				Label: "before: " + beforeFilter,
+			})
+		}
+
+		// TODO: Load recent searches from session or database
+		var recentSearches []string
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		// HTMX partial: return only results fragment.
@@ -48,6 +84,6 @@ func HandleSearch(registry *store.Registry) http.HandlerFunc {
 			return
 		}
 
-		_ = searchtmpl.Page(guildID, guildName, results, q, channel, author).Render(r.Context(), w)
+		_ = searchtmpl.Page(guildID, guildName, results, q, filters, recentSearches).Render(r.Context(), w)
 	}
 }

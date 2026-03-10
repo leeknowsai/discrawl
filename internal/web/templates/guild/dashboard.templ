@@ -6,7 +6,7 @@ import (
 	"github.com/steipete/discrawl/internal/web/templates/layout"
 )
 
-func formatStatValue(count int64) string {
+func formatStatValue(count int) string {
 	if count >= 1000000 {
 		return fmt.Sprintf("%.1fM", float64(count)/1000000)
 	} else if count >= 1000 {
@@ -16,24 +16,20 @@ func formatStatValue(count int64) string {
 }
 
 templ Dashboard(guildID string, guildName string, stats store.GuildStats) {
-	@layout.AppShell(guildName, guildID, guildName) {
-		<div class="dashboard-enhanced">
-			<!-- Quick Stats Overview -->
-			<div class="dashboard-stats-grid">
-				<div class="dashboard-stat-card">
-					<div class="dashboard-stat-header">
-						<div class="dashboard-stat-label-top">Messages</div>
-						<svg class="dashboard-stat-icon" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
+	@layout.AppShell(guildName + " - Dashboard", guildID, guildName) {
+		<div class="max-w-7xl mx-auto space-y-6">
+			<!-- Top Metrics Row -->
+			<div class="grid md:grid-cols-4 gap-4">
+				<!-- Total Messages -->
+				<div class="bg-discord-secondary rounded-lg p-4 border border-discord-border">
+					<div class="flex items-start justify-between mb-2">
+						<div class="text-sm text-discord-muted">Total Messages</div>
+						<svg class="w-5 h-5 text-discord-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
 						</svg>
 					</div>
-					<div class="dashboard-stat-value">{ formatStatValue(stats.MessageCount) }</div>
-					<div class="dashboard-stat-trend">
-						<svg class="dashboard-trend-icon trend-up" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-						</svg>
-						<span>+12.4% this week</span>
-					</div>
+					<div class="text-3xl font-bold mb-1">{ formatStatValue(stats.MessageCount) }</div>
+					<div class="text-xs text-green-400">↑ 2.4% from last month</div>
 				</div>
 				<div class="dashboard-stat-card">
 					<div class="dashboard-stat-header">

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>#general - Community Server</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        discord: {
+                            primary: '#1e1f22',
+                            secondary: '#2b2d31',
+                            tertiary: '#232428',
+                            text: '#f2f3f5',
+                            muted: '#949ba4',
+                            accent: '#5865f2',
+                            accentHover: '#4752c4',
+                            border: '#3f4147',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-discord-primary text-discord-text">
+    <!-- NOTE: Full chat interface with infinite scroll pattern, timestamps, and date separators -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Channel Sidebar -->
+        <div class="w-60 bg-discord-secondary flex flex-col border-r border-discord-border">
+            <!-- Server Header -->
+            <div class="h-12 px-4 flex items-center justify-between border-b border-discord-border hover:bg-discord-tertiary transition cursor-pointer">
+                <h2 class="font-semibold truncate">Community Server</h2>
+                <svg class="w-4 h-4 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+
+            <!-- Channel List -->
+            <div class="flex-1 overflow-y-auto px-2 py-2">
+                <div class="mb-4">
+                    <div class="px-2 py-1 text-xs font-semibold text-discord-muted uppercase flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                        <span>Text Channels</span>
+                    </div>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded bg-discord-tertiary text-discord-text transition text-sm">
+                        <span class="text-discord-muted">#</span>
+                        <span>general</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <span class="text-discord-muted">#</span>
+                        <span>announcements</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <span class="text-discord-muted">#</span>
+                        <span>questions</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <span class="text-discord-muted">#</span>
+                        <span>off-topic</span>
+                    </a>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <span class="text-discord-muted">#</span>
+                        <span>projects</span>
+                    </a>
+                </div>
+
+                <div class="mb-4">
+                    <div class="px-2 py-1 text-xs font-semibold text-discord-muted uppercase flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                        <span>Voice Channels</span>
+                    </div>
+                    <a href="#" class="flex items-center gap-2 px-2 py-1.5 rounded text-discord-muted hover:bg-discord-tertiary hover:text-discord-text transition text-sm">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                        <span>General Voice</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Top Bar -->
+            <div class="h-12 bg-discord-secondary border-b border-discord-border flex items-center justify-between px-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-discord-muted">#</span>
+                    <span class="font-semibold">general</span>
+                    <div class="h-4 w-px bg-discord-border"></div>
+                    <span class="text-sm text-discord-muted">Main discussion channel</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="p-2 hover:bg-discord-tertiary rounded transition" title="Search">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <button class="p-2 hover:bg-discord-tertiary rounded transition" title="Members">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <!-- NOTE: Infinite scroll chat history with date separators, relative timestamps, and hover-to-reveal absolute time -->
+            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                <!-- Load Previous Indicator -->
+                <div class="text-center py-2">
+                    <button class="text-sm text-discord-accent hover:text-discord-accentHover transition">
+                        Load previous messages
+                    </button>
+                </div>
+
+                <!-- Date Separator -->
+                <div class="flex items-center gap-4 my-4">
+                    <div class="flex-1 h-px bg-discord-border"></div>
+                    <span class="text-xs text-discord-muted font-semibold">March 8, 2026</span>
+                    <div class="flex-1 h-px bg-discord-border"></div>
+                </div>
+
+                <!-- Message Group 1 -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        AK
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">AlexKnight</span>
+                            <span class="text-xs text-discord-muted">10:23 AM</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            Hey everyone! Just wanted to share some progress on the new feature we've been working on. The API integration is almost complete.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Group 2 -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        SJ
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">SarahJones</span>
+                            <span class="text-xs text-discord-muted">10:25 AM</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            That's awesome! Can't wait to test it out. Did you manage to fix the authentication issue we discussed yesterday?
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Group 3 - Same author, stacked -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 flex-shrink-0"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-discord-text leading-relaxed">
+                            Also, I think we should schedule a quick sync meeting to go over the deployment timeline.
+                        </div>
+                        <div class="text-xs text-discord-muted mt-1 opacity-0 group-hover:opacity-100 transition">10:25 AM</div>
+                    </div>
+                </div>
+
+                <!-- Message Group 4 -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        MC
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">MikeChen</span>
+                            <span class="text-xs text-discord-muted">10:28 AM</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            Yes, the auth issue is resolved! I pushed the fix this morning.
+                        </div>
+                        <div class="mt-2">
+                            <div class="inline-flex items-center gap-2 bg-discord-tertiary px-3 py-2 rounded border border-discord-border text-sm">
+                                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>Fix: Authentication flow updated</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Separator -->
+                <div class="flex items-center gap-4 my-4">
+                    <div class="flex-1 h-px bg-discord-border"></div>
+                    <span class="text-xs text-discord-muted font-semibold">March 9, 2026</span>
+                    <div class="flex-1 h-px bg-discord-border"></div>
+                </div>
+
+                <!-- Message Group 5 -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-orange-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        EP
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">EmilyPark</span>
+                            <span class="text-xs text-discord-muted">9:15 AM</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            Good morning! Quick question about the deployment - are we still targeting this Friday?
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Group 6 with reactions -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        AK
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">AlexKnight</span>
+                            <span class="text-xs text-discord-muted">9:18 AM</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            Yes! Everything is on track for Friday. I'll create a deployment checklist and share it in #announcements.
+                        </div>
+                        <!-- Reactions -->
+                        <div class="flex gap-2 mt-2">
+                            <div class="inline-flex items-center gap-1 bg-discord-tertiary px-2 py-1 rounded text-xs border border-discord-border hover:border-discord-accent transition cursor-pointer">
+                                <span>👍</span>
+                                <span class="text-discord-muted">4</span>
+                            </div>
+                            <div class="inline-flex items-center gap-1 bg-discord-tertiary px-2 py-1 rounded text-xs border border-discord-border hover:border-discord-accent transition cursor-pointer">
+                                <span>🎉</span>
+                                <span class="text-discord-muted">2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Group 7 with code block -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        JS
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">JohnSmith</span>
+                            <span class="text-xs text-discord-muted">11:42 AM</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed mb-2">
+                            For anyone looking to test the new API locally, here's the config you'll need:
+                        </div>
+                        <div class="bg-discord-tertiary border border-discord-border rounded p-3 font-mono text-sm overflow-x-auto">
+                            <div class="text-green-400">// .env.local</div>
+                            <div class="text-discord-text">API_URL=http://localhost:3000</div>
+                            <div class="text-discord-text">API_KEY=your_key_here</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Separator - Today -->
+                <div class="flex items-center gap-4 my-4">
+                    <div class="flex-1 h-px bg-discord-border"></div>
+                    <span class="text-xs text-discord-muted font-semibold">Today</span>
+                    <div class="flex-1 h-px bg-discord-border"></div>
+                </div>
+
+                <!-- Recent message -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        LW
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">LisaWang</span>
+                            <span class="text-xs text-discord-muted">2 hours ago</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            The UI mockups are ready for review. I've uploaded them to the design folder. Let me know if you need any adjustments!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System message -->
+                <div class="flex gap-4 px-2 py-2">
+                    <div class="w-10 flex-shrink-0"></div>
+                    <div class="flex-1 min-w-0 flex items-center gap-2 text-sm text-discord-muted">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <span>3 members joined the server</span>
+                        <span class="text-xs">1 hour ago</span>
+                    </div>
+                </div>
+
+                <!-- Most recent message -->
+                <div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+                    <div class="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                        RD
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span class="font-semibold">RachelDavis</span>
+                            <span class="text-xs text-discord-muted">5 minutes ago</span>
+                        </div>
+                        <div class="text-discord-text leading-relaxed">
+                            Just tested the latest build - everything looks great! The performance improvements are noticeable. 🚀
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Input (Read-only in this mockup) -->
+            <!-- NOTE: Input box shown but disabled since this is a viewer, not live chat -->
+            <div class="p-4 bg-discord-secondary border-t border-discord-border">
+                <div class="bg-discord-tertiary rounded-lg px-4 py-3 text-discord-muted cursor-not-allowed opacity-50">
+                    View-only mode - Message history from archived data
+                </div>
+                <div class="flex items-center gap-2 mt-2 text-xs text-discord-muted">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>This channel contains 124,387 archived messages</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Member List Sidebar (Optional, can be toggled) -->
+        <div class="w-60 bg-discord-secondary border-l border-discord-border overflow-y-auto hidden lg:block">
+            <div class="p-4">
+                <div class="mb-4">
+                    <div class="text-xs font-semibold text-discord-muted uppercase mb-2">Online — 12</div>
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-tertiary transition cursor-pointer">
+                            <div class="relative">
+                                <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-xs font-bold">AK</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-discord-secondary"></div>
+                            </div>
+                            <span class="text-sm">AlexKnight</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-tertiary transition cursor-pointer">
+                            <div class="relative">
+                                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold">SJ</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-discord-secondary"></div>
+                            </div>
+                            <span class="text-sm">SarahJones</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-xs font-semibold text-discord-muted uppercase mb-2">Offline — 1,235</div>
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-discord-tertiary transition cursor-pointer">
+                            <div class="relative">
+                                <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-xs font-bold">TC</div>
+                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-discord-secondary"></div>
+                            </div>
+                            <span class="text-sm text-discord-muted">TomCruise</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTE: Mobile responsive - sidebars collapse to hamburger menu and member list hidden -->
+    <style>
+        @media (max-width: 768px) {
+            .channel-sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 50;
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            .channel-sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</body>
+</html>

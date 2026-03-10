@@ -21,38 +21,140 @@ type DaySection struct {
 
 templ MessageList(guildID string, channelID string, sections []DaySection, oldestID string) {
 	if len(sections) == 0 {
-		<p class="no-messages">No messages found.</p>
+		<div class="text-center py-8 text-discord-muted">
+			<svg class="w-16 h-16 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+			</svg>
+			<p class="text-lg font-semibold mb-2">No messages yet</p>
+			<p class="text-sm">Be the first to start a conversation in this channel!</p>
+		</div>
 	} else {
 		// Infinite scroll trigger: load older messages when this sentinel scrolls into view.
 		if oldestID != "" {
-			<div
-				hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages?before=" + oldestID }
-				hx-trigger="intersect once"
-				hx-swap="beforebegin"
-				hx-target="this"
-				class="load-more-sentinel"
-			></div>
+			<div class="text-center py-2">
+				<button
+					class="text-sm text-discord-accent hover:text-discord-accentHover transition"
+					hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages?before=" + oldestID }
+					hx-trigger="click"
+					hx-swap="beforebegin"
+					hx-target="closest div"
+				>
+					Load previous messages
+				</button>
+			</div>
 		}
 		for _, section := range sections {
-			<div class="day-divider">
-				<span>{ section.Day.Format("January 2, 2006") }</span>
+			<!-- Date Separator -->
+			<div class="flex items-center gap-4 my-4">
+				<div class="flex-1 h-px bg-discord-border"></div>
+				<span class="text-xs text-discord-muted font-semibold">{ formatDateLabel(section.Day) }</span>
+				<div class="flex-1 h-px bg-discord-border"></div>
 			</div>
-			for _, group := range section.Groups {
-				<div class="message-group">
-					<div class="message-author">{ group.AuthorName }</div>
-					for _, msg := range group.Messages {
-						<div class="message-row" id={ "msg-" + msg.MessageID }>
-							<span class="message-time">{ msg.CreatedAt.Format("15:04") }</span>
-							<span class="message-content">{ msg.Content }</span>
-							if msg.HasAttachments {
-								<span class="message-attachment-indicator" title="has attachments">📎</span>
-							}
-						</div>
-					}
-				</div>
+			for i, group := range section.Groups {
+				@messageGroup(group, i == 0)
 			}
 		}
 	}
+}
+
+templ messageGroup(group MessageGroup, isFirst bool) {
+	for msgIdx, msg := range group.Messages {
+		if msgIdx == 0 {
+			<!-- First message in group - show avatar and username -->
+			<div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+				<div class={ "w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0", getUserColor(group.AuthorID) }>
+					{ getInitials(group.AuthorName) }
+				</div>
+				<div class="flex-1 min-w-0">
+					<div class="flex items-baseline gap-2 mb-1">
+						<span class="font-semibold">{ group.AuthorName }</span>
+						<span class="text-xs text-discord-muted">{ msg.CreatedAt.Format("3:04 PM") }</span>
+					</div>
+					<div class="text-discord-text leading-relaxed whitespace-pre-wrap">
+						{ msg.Content }
+					</div>
+					if msg.HasAttachments {
+						<div class="mt-2">
+							<div class="inline-flex items-center gap-2 bg-discord-tertiary px-3 py-2 rounded border border-discord-border text-sm">
+								<svg class="w-5 h-5 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+								</svg>
+								<span>Attachment(s)</span>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		} else {
+			<!-- Stacked message from same author -->
+			<div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+				<div class="w-10 flex-shrink-0">
+					<span class="text-xs text-discord-muted opacity-0 group-hover:opacity-100 transition">
+						{ msg.CreatedAt.Format("15:04") }
+					</span>
+				</div>
+				<div class="flex-1 min-w-0">
+					<div class="text-discord-text leading-relaxed whitespace-pre-wrap">
+						{ msg.Content }
+					</div>
+					if msg.HasAttachments {
+						<div class="mt-2">
+							<div class="inline-flex items-center gap-2 bg-discord-tertiary px-3 py-2 rounded border border-discord-border text-sm">
+								<svg class="w-5 h-5 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+								</svg>
+								<span>Attachment(s)</span>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		}
+	}
+}
+
+func formatDateLabel(t time.Time) string {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	yesterday := today.AddDate(0, 0, -1)
+	msgDate := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+
+	if msgDate.Equal(today) {
+		return "Today"
+	} else if msgDate.Equal(yesterday) {
+		return "Yesterday"
+	}
+	return t.Format("January 2, 2006")
+}
+
+func getInitials(name string) string {
+	if len(name) == 0 {
+		return "?"
+	}
+	parts := []rune(name)
+	if len(parts) < 2 {
+		return string(parts[0:1])
+	}
+	// Simple initials: take first 2 chars for now
+	return string(parts[0:2])
+}
+
+func getUserColor(userID string) string {
+	colors := []string{
+		"bg-green-600",
+		"bg-blue-600",
+		"bg-purple-600",
+		"bg-orange-600",
+		"bg-pink-600",
+		"bg-teal-600",
+		"bg-red-600",
+		"bg-indigo-600",
+		"bg-yellow-600",
+		"bg-cyan-600",
+	}
+	// Simple hash based on userID length
+	idx := len(userID) % len(colors)
+	return colors[idx]
 }
 
 // FormatCount formats an int for display.

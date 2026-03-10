@@ -2,48 +2,148 @@ package members
 
 import (
 	"fmt"
+	"time"
 	"github.com/steipete/discrawl/internal/store"
-	"github.com/steipete/discrawl/internal/web/templates/layout"
 )
 
-templ Profile(guildID string, guildName string, member store.MemberRow, msgs []store.MessageRow) {
-	@layout.AppShell("Member Profile", guildID, guildName) {
-		<div class="member-profile">
-			<div class="profile-header">
-				<h2>{ profileDisplayName(member) }</h2>
-				<dl class="profile-meta">
-					<dt>Username</dt>
-					<dd>{ member.Username }</dd>
-					if member.Nick != "" {
-						<dt>Nickname</dt>
-						<dd>{ member.Nick }</dd>
-					}
-					if !member.JoinedAt.IsZero() {
-						<dt>Joined</dt>
-						<dd>{ member.JoinedAt.Format("2006-01-02") }</dd>
-					}
-					<dt>User ID</dt>
-					<dd>{ member.UserID }</dd>
-				</dl>
-			</div>
-			<div class="profile-messages">
-				<h3>Recent Messages ({ fmt.Sprintf("%d", len(msgs)) })</h3>
-				if len(msgs) == 0 {
-					<p>No messages found.</p>
-				} else {
-					<ul class="message-list profile-message-list">
-						for _, msg := range msgs {
-							<li class="message-item">
-								<span class="message-time">{ msg.CreatedAt.Format("2006-01-02 15:04") }</span>
-								<span class="message-channel">#{ msg.ChannelName }</span>
-								<span class="message-content">{ msg.Content }</span>
-							</li>
+type ProfileStats struct {
+	TotalMessages int
+	DaysActive    int
+	ActivityRate  int
+	MessagesPerDay int
+	JoinedAt      time.Time
+	FirstMessageAt time.Time
+	LastActiveAt  time.Time
+	MostActiveChannel string
+	ActivityChart []int // 7 days of activity
+	Roles         []string
+}
+
+templ ProfileModal(guildID string, member store.MemberRow, stats ProfileStats, messages []store.MessageRow) {
+	<!-- Profile Modal -->
+	<div id="profile-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onclick="this.remove()">
+		<div class="bg-discord-secondary rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+			<!-- Profile Header -->
+			<div class={ "h-32 rounded-t-lg", getProfileBannerColor(member.UserID) }></div>
+			<div class="px-6 pb-6">
+				<div class="flex items-start gap-4 -mt-12">
+					<div class="relative">
+						<div class={ "w-24 h-24 rounded-full border-4 border-discord-secondary flex items-center justify-center font-bold text-4xl", getMemberColor(member.UserID) }>
+							{ getMemberInitials(profileDisplayName(member)) }
+						</div>
+						<div class={ "absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-discord-secondary", getOnlineStatus(member.UserID) }></div>
+					</div>
+					<div class="flex-1 mt-12">
+						<h2 class="text-2xl font-bold">{ profileDisplayName(member) }</h2>
+						<p class="text-discord-muted">{ "@" + member.Username }</p>
+					</div>
+					<button onclick="document.getElementById('profile-modal').remove()" class="p-2 hover:bg-discord-tertiary rounded transition">
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				<!-- Roles -->
+				if len(stats.Roles) > 0 {
+					<div class="mt-4">
+						<h3 class="text-sm font-semibold text-discord-muted uppercase mb-2">Roles</h3>
+						<div class="flex flex-wrap gap-2">
+							for _, role := range stats.Roles {
+								<div class={ "px-3 py-1 rounded-full text-sm", getRoleColor(role) }>
+									{ role }
+								</div>
+							}
+						</div>
+					</div>
+				}
+				<!-- Stats -->
+				<div class="mt-6">
+					<h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Member Stats</h3>
+					<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+						<div class="bg-discord-tertiary rounded-lg p-3 text-center">
+							<div class="text-2xl font-bold">{ formatProfileCount(stats.TotalMessages) }</div>
+							<div class="text-xs text-discord-muted mt-1">Total Messages</div>
+						</div>
+						<div class="bg-discord-tertiary rounded-lg p-3 text-center">
+							<div class="text-2xl font-bold">{ fmt.Sprintf("%d", stats.DaysActive) }</div>
+							<div class="text-xs text-discord-muted mt-1">Days Active</div>
+						</div>
+						<div class="bg-discord-tertiary rounded-lg p-3 text-center">
+							<div class="text-2xl font-bold">{ fmt.Sprintf("%d%%", stats.ActivityRate) }</div>
+							<div class="text-xs text-discord-muted mt-1">Activity Rate</div>
+						</div>
+						<div class="bg-discord-tertiary rounded-lg p-3 text-center">
+							<div class="text-2xl font-bold">{ fmt.Sprintf("%d", stats.MessagesPerDay) }</div>
+							<div class="text-xs text-discord-muted mt-1">Msgs/Day</div>
+						</div>
+					</div>
+				</div>
+				<!-- Member Info -->
+				<div class="mt-6">
+					<h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Member Information</h3>
+					<div class="space-y-2 bg-discord-tertiary rounded-lg p-4">
+						if !stats.JoinedAt.IsZero() {
+							<div class="flex justify-between text-sm">
+								<span class="text-discord-muted">Joined Server</span>
+								<span>{ stats.JoinedAt.Format("January 2, 2006") }</span>
+							</div>
 						}
-					</ul>
+						if !stats.FirstMessageAt.IsZero() {
+							<div class="flex justify-between text-sm">
+								<span class="text-discord-muted">First Message</span>
+								<span>{ stats.FirstMessageAt.Format("January 2, 2006") }</span>
+							</div>
+						}
+						if !stats.LastActiveAt.IsZero() {
+							<div class="flex justify-between text-sm">
+								<span class="text-discord-muted">Last Active</span>
+								<span>{ formatRelativeTime(stats.LastActiveAt) }</span>
+							</div>
+						}
+						if stats.MostActiveChannel != "" {
+							<div class="flex justify-between text-sm">
+								<span class="text-discord-muted">Most Active Channel</span>
+								<span class="text-discord-accent">#{ stats.MostActiveChannel }</span>
+							</div>
+						}
+					</div>
+				</div>
+				<!-- Activity Chart -->
+				if len(stats.ActivityChart) > 0 {
+					<div class="mt-6">
+						<h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Activity (Last 7 Days)</h3>
+						<div class="bg-discord-tertiary rounded-lg p-4">
+							<div class="flex items-end justify-between gap-2 h-32">
+								for i, val := range stats.ActivityChart {
+									<div class="flex-1 flex flex-col items-center gap-2">
+										<div class="w-full bg-discord-accent rounded-t" style={ fmt.Sprintf("height: %d%%", getChartHeight(val, stats.ActivityChart)) }></div>
+										<span class="text-xs text-discord-muted">{ getDayLabel(i) }</span>
+									</div>
+								}
+							</div>
+						</div>
+					</div>
+				}
+				<!-- Recent Messages -->
+				if len(messages) > 0 {
+					<div class="mt-6">
+						<h3 class="text-sm font-semibold text-discord-muted uppercase mb-3">Recent Messages ({ fmt.Sprintf("%d", len(messages)) })</h3>
+						<div class="space-y-3 bg-discord-tertiary rounded-lg p-4 max-h-64 overflow-y-auto">
+							for _, msg := range messages {
+								<div class="text-sm">
+									<div class="flex items-center gap-2 mb-1">
+										<span class="text-xs text-discord-muted">{ msg.CreatedAt.Format("Jan 2, 15:04") }</span>
+										<span class="text-xs text-discord-accent">#{ msg.ChannelName }</span>
+									</div>
+									<p class="text-discord-text">{ msg.Content }</p>
+								</div>
+							}
+						</div>
+					</div>
 				}
 			</div>
 		</div>
-	}
+	</div>
 }
 
 func profileDisplayName(m store.MemberRow) string {
@@ -57,4 +157,97 @@ func profileDisplayName(m store.MemberRow) string {
 		return m.GlobalName
 	}
 	return m.Username
+}
+
+func getProfileBannerColor(userID string) string {
+	colors := []string{
+		"bg-gradient-to-br from-green-600 to-green-800",
+		"bg-gradient-to-br from-blue-600 to-blue-800",
+		"bg-gradient-to-br from-purple-600 to-purple-800",
+		"bg-gradient-to-br from-orange-600 to-orange-800",
+		"bg-gradient-to-br from-pink-600 to-pink-800",
+		"bg-gradient-to-br from-teal-600 to-teal-800",
+	}
+	idx := len(userID) % len(colors)
+	return colors[idx]
+}
+
+func getRoleColor(role string) string {
+	switch role {
+	case "Admin":
+		return "bg-discord-accent"
+	case "Moderator":
+		return "bg-purple-600"
+	case "Developer":
+		return "bg-green-600"
+	default:
+		return "bg-discord-tertiary"
+	}
+}
+
+func formatProfileCount(count int) string {
+	if count >= 1000 {
+		return fmt.Sprintf("%s", formatWithCommas(count))
+	}
+	return fmt.Sprintf("%d", count)
+}
+
+func formatWithCommas(n int) string {
+	s := fmt.Sprintf("%d", n)
+	if len(s) <= 3 {
+		return s
+	}
+	// Insert comma every 3 digits from right
+	result := ""
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result += ","
+		}
+		result += string(c)
+	}
+	return result
+}
+
+func formatRelativeTime(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	hours := int(diff.Hours())
+	if hours < 1 {
+		mins := int(diff.Minutes())
+		if mins < 1 {
+			return "just now"
+		}
+		return fmt.Sprintf("%d minutes ago", mins)
+	} else if hours < 24 {
+		return fmt.Sprintf("%d hours ago", hours)
+	} else if hours < 48 {
+		return "yesterday"
+	}
+	days := hours / 24
+	return fmt.Sprintf("%d days ago", days)
+}
+
+func getChartHeight(val int, all []int) int {
+	if len(all) == 0 || val == 0 {
+		return 0
+	}
+	max := 0
+	for _, v := range all {
+		if v > max {
+			max = v
+		}
+	}
+	if max == 0 {
+		return 0
+	}
+	return (val * 100) / max
+}
+
+func getDayLabel(idx int) string {
+	days := []string{"M", "T", "W", "T", "F", "S", "S"}
+	if idx >= 0 && idx < len(days) {
+		return days[idx]
+	}
+	return ""
 }

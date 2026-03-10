@@ -24,11 +24,13 @@ func HandleMessageViewer(registry *store.Registry) http.HandlerFunc {
 		channelID := chi.URLParam(r, "channelID")
 
 		channelName := channelID
+		channelTopic := ""
 		channels, err := gs.Channels(r.Context(), guildID)
 		if err == nil {
 			for _, ch := range channels {
 				if ch.ID == channelID {
 					channelName = ch.Name
+					channelTopic = ch.Topic
 					break
 				}
 			}
@@ -37,7 +39,7 @@ func HandleMessageViewer(registry *store.Registry) http.HandlerFunc {
 		guildName := resolveGuildName(r, registry, guildID)
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = messagetmpl.Viewer(guildID, guildName, channelID, channelName).Render(r.Context(), w)
+		_ = messagetmpl.Viewer(guildID, guildName, channelID, channelName, channelTopic).Render(r.Context(), w)
 	}
 }
 

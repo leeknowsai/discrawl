@@ -39,7 +39,48 @@ func HandleMemberProfile() http.HandlerFunc {
 			msgs = nil
 		}
 
+		// Build profile stats
+		stats := membertmpl.ProfileStats{
+			Roles:         []string{}, // TODO: Load roles from database
+			ActivityChart: make([]int, 7),
+		}
+
+		// Get total messages
+		var totalMsgs, daysActive int
+		_ = gs.ReadDB().QueryRowContext(r.Context(), `
+			SELECT COUNT(*) as cnt,
+			       COUNT(DISTINCT date(created_at)) as days
+			FROM messages
+			WHERE author_id = ? AND deleted_at IS NULL
+		`, userID).Scan(&totalMsgs, &daysActive)
+
+		stats.TotalMessages = totalMsgs
+		stats.DaysActive = daysActive
+		if daysActive > 0 {
+			stats.MessagesPerDay = totalMsgs / daysActive
+			stats.ActivityRate = totalMsgs / daysActive
+		}
+
+		// Get first/last message times
+		_ = gs.ReadDB().QueryRowContext(r.Context(), `
+			SELECT MIN(created_at), MAX(created_at)
+			FROM messages
+			WHERE author_id = ? AND deleted_at IS NULL
+		`, userID).Scan(&stats.FirstMessageAt, &stats.LastActiveAt)
+
+		// Get most active channel
+		var channelID string
+		_ = gs.ReadDB().QueryRowContext(r.Context(), `
+			SELECT m.channel_id, COALESCE(c.name, m.channel_id) as name
+			FROM messages m
+			LEFT JOIN channels c ON c.id = m.channel_id
+			WHERE m.author_id = ? AND m.deleted_at IS NULL
+			GROUP BY m.channel_id
+			ORDER BY COUNT(*) DESC
+			LIMIT 1
+		`, userID).Scan(&channelID, &stats.MostActiveChannel)
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = membertmpl.Profile(guildID, guildID, member, msgs).Render(r.Context(), w)
+		_ = membertmpl.ProfileModal(guildID, member, stats, msgs).Render(r.Context(), w)
 	}
 }

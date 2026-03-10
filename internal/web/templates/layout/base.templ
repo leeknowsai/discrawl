@@ -2,21 +2,38 @@ package layout
 
 templ Base(title string) {
 	<!DOCTYPE html>
-	<html lang="en" data-theme="dark">
+	<html lang="en">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title } - discrawl</title>
-			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
-			<link rel="stylesheet" href="/static/css/app.css"/>
+			<title>{ title } - OpenDiscord</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+			<script>
+				tailwind.config = {
+					theme: {
+						extend: {
+							colors: {
+								discord: {
+									primary: '#1e1f22',
+									secondary: '#2b2d31',
+									tertiary: '#232428',
+									text: '#f2f3f5',
+									muted: '#949ba4',
+									accent: '#5865f2',
+									accentHover: '#4752c4',
+									border: '#3f4147',
+								}
+							}
+						}
+					}
+				}
+			</script>
 			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
 			<script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+			<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 		</head>
-		<body>
-			<div class="app-layout">
-				{ children... }
-			</div>
-			<script src="/static/js/app.js"></script>
+		<body class="bg-discord-primary text-discord-text">
+			{ children... }
 		</body>
 	</html>
 }

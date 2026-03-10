@@ -36,14 +36,46 @@ func HandleMemberList(registry *store.Registry) http.HandlerFunc {
 
 		guildName := resolveGuildName(r, registry, guildID)
 
+		// Build member stats from database
+		stats := make(map[string]membertmpl.MemberStats)
+		for _, member := range members {
+			// Get message count for each member
+			var msgCount, daysActive int
+			_ = gs.ReadDB().QueryRowContext(r.Context(), `
+				SELECT COUNT(*) as cnt,
+				       COUNT(DISTINCT date(created_at)) as days
+				FROM messages
+				WHERE author_id = ? AND deleted_at IS NULL
+			`, member.UserID).Scan(&msgCount, &daysActive)
+
+			activityRate := 0
+			if daysActive > 0 {
+				activityRate = msgCount / daysActive
+			}
+
+			stats[member.UserID] = membertmpl.MemberStats{
+				MessageCount: msgCount,
+				DaysActive:   daysActive,
+				ActivityRate: activityRate,
+			}
+		}
+
+		// Get total member count
+		totalCount := len(members)
+		if q == "" {
+			var count int
+			_ = gs.ReadDB().QueryRowContext(r.Context(), `SELECT COUNT(*) FROM members`).Scan(&count)
+			totalCount = count
+		}
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		// HTMX partial request: return only the results fragment.
 		if r.Header.Get("HX-Request") == "true" {
-			_ = membertmpl.MemberResults(members).Render(r.Context(), w)
+			_ = membertmpl.MemberResults(guildID, members, stats).Render(r.Context(), w)
 			return
 		}
 
-		_ = membertmpl.List(guildID, guildName, members, q).Render(r.Context(), w)
+		_ = membertmpl.List(guildID, guildName, members, stats, totalCount, q).Render(r.Context(), w)
 	}
 }
