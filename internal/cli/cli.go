@@ -179,6 +179,9 @@ func (r *runtime) withServices(withDiscord bool, fn func() error) error {
 				if err != nil {
 					return nil, err
 				}
+				if token.IsUser {
+					return discord.NewUser(token.Token)
+				}
 				return discord.New(token.Token)
 			}
 		}

@@ -76,6 +76,7 @@ type TokenResolution struct {
 	Token  string
 	Source string
 	Path   string
+	IsUser bool // true when using a user token (no "Bot " prefix)
 }
 
 type OpenClawDiscord struct {
@@ -345,6 +346,10 @@ func ResolveDiscordToken(cfg Config) (TokenResolution, error) {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return TokenResolution{}, err
 		}
+	}
+	// Check for user token first (higher privilege for syncing)
+	if userToken := strings.TrimSpace(os.Getenv("DISCORD_USER_TOKEN")); userToken != "" {
+		return TokenResolution{Token: userToken, Source: "env", Path: "DISCORD_USER_TOKEN", IsUser: true}, nil
 	}
 	if envToken := NormalizeBotToken(os.Getenv(cfg.Discord.TokenEnv)); envToken != "" {
 		return TokenResolution{Token: envToken, Source: "env", Path: cfg.Discord.TokenEnv}, nil

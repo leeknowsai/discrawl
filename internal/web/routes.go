@@ -39,6 +39,8 @@ func (s *Server) routes(r chi.Router) {
 		r.Use(auth.RequireAuth(s.sessionManager))
 
 		r.Get("/guilds", handlers.HandleGuildSelector(s.registry.Meta()))
+		r.Get("/guilds/import", handlers.HandleImportModal())
+		r.Post("/guilds/import", handlers.HandleImportServer(s.configPath, s.registry, s.logger))
 
 		r.Route("/g/{guildID}", func(r chi.Router) {
 			r.Use(TenantResolver(s.registry))

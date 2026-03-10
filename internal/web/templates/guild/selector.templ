@@ -119,7 +119,7 @@ templ Selector(guilds []store.MetaGuild) {
 				}
 				<!-- Add Server -->
 				<div class="relative group">
-					<button class="w-12 h-12 rounded-full hover:rounded-xl bg-discord-secondary hover:bg-green-600 transition-all flex items-center justify-center">
+					<button hx-get="/app/guilds/import" hx-target="body" hx-swap="beforeend" class="w-12 h-12 rounded-full hover:rounded-xl bg-discord-secondary hover:bg-green-600 transition-all flex items-center justify-center">
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
 						</svg>
@@ -197,7 +197,7 @@ templ Selector(guilds []store.MetaGuild) {
 									</a>
 								}
 								<!-- Add Server Card -->
-								<div class="bg-discord-secondary border-2 border-dashed border-discord-border rounded-lg p-5 hover:bg-discord-tertiary hover:border-discord-accent transition cursor-pointer flex items-center justify-center min-h-[200px]">
+								<div hx-get="/app/guilds/import" hx-target="body" hx-swap="beforeend" class="bg-discord-secondary border-2 border-dashed border-discord-border rounded-lg p-5 hover:bg-discord-tertiary hover:border-discord-accent transition cursor-pointer flex items-center justify-center min-h-[200px]">
 									<div class="text-center">
 										<div class="w-16 h-16 rounded-xl bg-discord-tertiary flex items-center justify-center mx-auto mb-3">
 											<svg class="w-8 h-8 text-discord-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">

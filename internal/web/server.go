@@ -24,6 +24,7 @@ import (
 // Server holds the HTTP server state.
 type Server struct {
 	cfg            config.Config
+	configPath     string
 	router         chi.Router
 	registry       *store.Registry
 	logger         *slog.Logger
@@ -35,12 +36,13 @@ type Server struct {
 }
 
 // NewServer creates a new Server.
-func NewServer(cfg config.Config, registry *store.Registry, logger *slog.Logger) *Server {
+func NewServer(cfg config.Config, configPath string, registry *store.Registry, logger *slog.Logger) *Server {
 	broker := sse.NewBroker()
 	// 10 requests per second per user, burst of 20.
 	limiter := ratelimit.NewPerUserLimiter(10.0, 20)
 	s := &Server{
 		cfg:         cfg,
+		configPath:  configPath,
 		registry:    registry,
 		logger:      logger,
 		sseBroker:   broker,

@@ -1,0 +1,65 @@
+package guild
+
+templ ImportModal() {
+	<!-- Modal Overlay -->
+	<div id="import-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+		 hx-on:click="if (event.target === this) this.remove()">
+		<!-- Modal Content -->
+		<div class="bg-discord-secondary rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+			<!-- Header -->
+			<div class="flex items-center justify-between mb-6">
+				<h2 class="text-xl font-semibold">Import Server Data</h2>
+				<button onclick="document.getElementById('import-modal').remove()"
+						class="text-discord-muted hover:text-discord-text transition">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Form -->
+			<form hx-post="/app/guilds/import" hx-target="#import-error" hx-swap="innerHTML" class="space-y-4">
+				<div>
+					<label for="token" class="block text-sm font-medium mb-2">Discord Bot Token</label>
+					<input
+						type="password"
+						id="token"
+						name="token"
+						required
+						class="w-full bg-discord-tertiary border border-discord-border rounded-lg px-4 py-3 text-discord-text placeholder-discord-muted focus:outline-none focus:border-discord-accent transition"
+						placeholder="Your Discord bot token"/>
+					<p class="text-xs text-discord-muted mt-1">Enter your Discord bot token to discover guilds</p>
+				</div>
+
+				<div>
+					<label for="openclaw_path" class="block text-sm font-medium mb-2">OpenClaw Config Path (Optional)</label>
+					<input
+						type="text"
+						id="openclaw_path"
+						name="openclaw_path"
+						class="w-full bg-discord-tertiary border border-discord-border rounded-lg px-4 py-3 text-discord-text placeholder-discord-muted focus:outline-none focus:border-discord-accent transition"
+						placeholder="~/.openclaw/openclaw.json"/>
+					<p class="text-xs text-discord-muted mt-1">Optional: specify custom OpenClaw config location</p>
+				</div>
+
+				<!-- Error Display -->
+				<div id="import-error"></div>
+
+				<!-- Buttons -->
+				<div class="flex gap-3 pt-2">
+					<button
+						type="button"
+						onclick="document.getElementById('import-modal').remove()"
+						class="flex-1 px-4 py-2 bg-discord-tertiary hover:bg-discord-border rounded transition font-medium">
+						Cancel
+					</button>
+					<button
+						type="submit"
+						class="flex-1 px-4 py-2 bg-discord-accent hover:bg-discord-accentHover rounded transition font-medium text-white">
+						Import
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}

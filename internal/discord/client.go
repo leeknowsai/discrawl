@@ -29,7 +29,16 @@ type Client struct {
 }
 
 func New(token string) (*Client, error) {
-	session, err := discordgo.New("Bot " + token)
+	return newClient("Bot " + token)
+}
+
+// NewUser creates a Discord client using a user token (no "Bot " prefix).
+func NewUser(token string) (*Client, error) {
+	return newClient(token)
+}
+
+func newClient(authToken string) (*Client, error) {
+	session, err := discordgo.New(authToken)
 	if err != nil {
 		return nil, fmt.Errorf("create discord session: %w", err)
 	}

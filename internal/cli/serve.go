@@ -53,6 +53,6 @@ func (r *runtime) runServe(args []string) error {
 		listenPort = *port
 	}
 
-	srv := web.NewServer(cfg, registry, r.logger)
+	srv := web.NewServer(cfg, r.configPath, registry, r.logger)
 	return srv.ListenAndServe(r.ctx, listenHost, listenPort)
 }
