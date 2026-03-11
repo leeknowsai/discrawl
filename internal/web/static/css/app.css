@@ -1330,3 +1330,16 @@ html {
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* Keyword alert highlighting */
+.alert-keyword-match {
+    background: rgba(250, 166, 26, 0.1);
+    border-left: 3px solid #faa61a;
+    padding-left: 0.75rem;
+    margin-left: -0.75rem;
+    transition: background 0.3s ease;
+}
+
+.alert-keyword-match:hover {
+    background: rgba(250, 166, 26, 0.15);
+}

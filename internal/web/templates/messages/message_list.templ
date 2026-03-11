@@ -61,7 +61,7 @@ templ messageGroup(group MessageGroup, isFirst bool) {
 	for msgIdx, msg := range group.Messages {
 		if msgIdx == 0 {
 			<!-- First message in group - show avatar and username -->
-			<div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+			<div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group" data-message-id={ msg.MessageID }>
 				<div class={ "w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0", getUserColor(group.AuthorID) }>
 					{ getInitials(group.AuthorName) }
 				</div>
@@ -70,7 +70,7 @@ templ messageGroup(group MessageGroup, isFirst bool) {
 						<span class="font-semibold">{ group.AuthorName }</span>
 						<span class="text-xs text-discord-muted">{ msg.CreatedAt.Format("3:04 PM") }</span>
 					</div>
-					<div class="text-discord-text leading-relaxed whitespace-pre-wrap">
+					<div class="text-discord-text leading-relaxed whitespace-pre-wrap" data-message-content>
 						{ msg.Content }
 					</div>
 					if msg.HasAttachments {
@@ -87,14 +87,14 @@ templ messageGroup(group MessageGroup, isFirst bool) {
 			</div>
 		} else {
 			<!-- Stacked message from same author -->
-			<div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group">
+			<div class="flex gap-4 hover:bg-discord-secondary/30 px-2 py-1 -mx-2 rounded group" data-message-id={ msg.MessageID }>
 				<div class="w-10 flex-shrink-0">
 					<span class="text-xs text-discord-muted opacity-0 group-hover:opacity-100 transition">
 						{ msg.CreatedAt.Format("15:04") }
 					</span>
 				</div>
 				<div class="flex-1 min-w-0">
-					<div class="text-discord-text leading-relaxed whitespace-pre-wrap">
+					<div class="text-discord-text leading-relaxed whitespace-pre-wrap" data-message-content>
 						{ msg.Content }
 					</div>
 					if msg.HasAttachments {

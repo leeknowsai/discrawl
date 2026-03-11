@@ -54,17 +54,15 @@ templ Viewer(guildID string, guildName string, channelID string, channelName str
 					</div>
 				</div>
 				<!-- Messages Container -->
-				<div
-					class="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-					id="message-container"
-					hx-ext="sse"
-					sse-connect={ "/api/v1/g/" + guildID + "/live" }
-				>
+				<div class="flex-1 overflow-y-auto px-4 py-4 space-y-4" id="message-container">
 					<div
 						id="message-list"
 						hx-get={ "/app/g/" + guildID + "/c/" + channelID + "/messages" }
 						hx-trigger="load"
 						hx-swap="innerHTML"
+						hx-ext="sse"
+						sse-connect={ "/api/v1/g/" + guildID + "/live" }
+						sse-swap="message"
 					>
 						<div class="text-center py-4 text-discord-muted">Loading messages...</div>
 					</div>
