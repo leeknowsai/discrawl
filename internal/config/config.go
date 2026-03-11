@@ -347,10 +347,6 @@ func ResolveDiscordToken(cfg Config) (TokenResolution, error) {
 			return TokenResolution{}, err
 		}
 	}
-	// Check for user token first (higher privilege for syncing)
-	if userToken := strings.TrimSpace(os.Getenv("DISCORD_USER_TOKEN")); userToken != "" {
-		return TokenResolution{Token: userToken, Source: "env", Path: "DISCORD_USER_TOKEN", IsUser: true}, nil
-	}
 	if envToken := NormalizeBotToken(os.Getenv(cfg.Discord.TokenEnv)); envToken != "" {
 		return TokenResolution{Token: envToken, Source: "env", Path: cfg.Discord.TokenEnv}, nil
 	}
