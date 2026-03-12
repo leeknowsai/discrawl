@@ -119,4 +119,37 @@ func TestHandleMemberProfile(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, rec.Code)
 	})
+
+	t.Run("parses role IDs from member data", func(t *testing.T) {
+		testDB := setupTestGuildDB(t)
+		defer testDB.Close()
+
+		ctx := context.Background()
+		// Insert member with role IDs
+		_, err := testDB.DB().ExecContext(ctx, `
+			insert into members (guild_id, user_id, username, role_ids_json, raw_json, updated_at)
+			values ('test-guild', 'user-1', 'alice', '["role-1", "role-2", "role-3"]', '{}', datetime('now'))
+		`)
+		require.NoError(t, err)
+
+		ctx = webctx.WithGuildStore(ctx, testDB)
+		req := httptest.NewRequest("GET", "/app/g/guild-1/members/user-1", nil)
+		req = req.WithContext(ctx)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("guildID", "guild-1")
+		rctx.URLParams.Add("userID", "user-1")
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		rec := httptest.NewRecorder()
+		handler := HandleMemberProfile()
+		handler.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code)
+		// Verify the response contains the role IDs
+		body := rec.Body.String()
+		require.Contains(t, body, "role-1")
+		require.Contains(t, body, "role-2")
+		require.Contains(t, body, "role-3")
+	})
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -41,8 +42,16 @@ func HandleMemberProfile() http.HandlerFunc {
 
 		// Build profile stats
 		stats := membertmpl.ProfileStats{
-			Roles:         []string{}, // TODO: Load roles from database
+			Roles:         []string{},
 			ActivityChart: make([]int, 7),
+		}
+
+		// Parse role IDs from member data
+		var roleIDs []string
+		if member.RoleIDsJSON != "" && member.RoleIDsJSON != "[]" {
+			if err := json.Unmarshal([]byte(member.RoleIDsJSON), &roleIDs); err == nil {
+				stats.Roles = roleIDs
+			}
 		}
 
 		// Get total messages
